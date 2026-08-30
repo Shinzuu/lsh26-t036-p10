@@ -17,11 +17,13 @@
  * path and only the recharge days and the selection get their own elements.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useDisplay } from '../lib/display.jsx'
 import { useCase, useDay } from '../lib/store.js'
+import { useReveal } from '../lib/useReveal.js'
 import { linePath, linearScale, niceTicks } from '../lib/chart-scale.js'
 import { monthOf, MONTHLY_FIXED_PAISA, SLABS } from '../lib/tariff.js'
-import Explainer from './Explainer.jsx'
+import { shortDate, monthShort, plural } from '../lib/format.js'
 
 /**
  * Two viewBoxes rather than one stretched box.
@@ -53,22 +55,9 @@ function useNarrow() {
   return narrow
 }
 
-const formatDay = (d) =>
-  new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  })
-
-const formatMonth = (m) =>
-  new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-GB', {
-    month: 'short',
-    timeZone: 'UTC',
-  })
-
-/** "1 day" / "181 days" — a count and its noun, agreeing. */
-const plural = (n, word, format = (v) => v) => `${format(n)} ${word}${n === 1 ? "" : "s"}`
+// The one set of date words the app uses, from src/lib/format.js.
+const formatDay = shortDate
+const formatMonth = monthShort
 
 /** Axis labels are taka, not paisa — no decimals, they are only for scale. */
 const axisTaka = (paisa) => `৳${Math.round(paisa / 100)}`
@@ -98,7 +87,7 @@ function Stat({ label, value, hint, tone = 'default' }) {
  * Every number here comes from the engine's own SLABS and the selected day's
  * running total — nothing is redrawn by hand.
  */
-function SlabLadder({ unitsBefore, unitsAfter, month }) {
+export function SlabLadder({ unitsBefore, unitsAfter, month, compact = false }) {
   const { money, number } = useDisplay()
   const top = 700 // the 601+ band is open-ended; 700u is enough to show it
   const pct = (u) => Math.min(100, (u / top) * 100)
@@ -112,13 +101,13 @@ function SlabLadder({ unitsBefore, unitsAfter, month }) {
   const rateNow = SLABS.find((b) => unitsAfter <= b.upTo) ?? SLABS[SLABS.length - 1]
 
   return (
-    <div className="mt-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h4 className="text-sm font-medium">Where {formatMonth(month)} sits on the slab ladder</h4>
-        <p className="text-xs text-ink-500">
-          next unit costs ৳{(rateNow.paisaPerUnit / 100).toFixed(2)} · resets to ৳4.63 on the 1st
-        </p>
-      </div>
+    <div className={compact ? 'mt-3' : 'mt-4'}>
+      {!compact && (
+        <h4 className="text-sm font-medium">
+          Where {formatMonth(month)} sits on the slab ladder
+          <span className="ml-2 font-normal text-ink-500">· next unit {money(rateNow.paisaPerUnit)}</span>
+        </h4>
+      )}
 
       <div
         className="relative mt-2 h-7 w-full overflow-hidden rounded-lg border border-ink-300/60 bg-white dark:bg-ink-900/40"
@@ -150,14 +139,16 @@ function SlabLadder({ unitsBefore, unitsAfter, month }) {
             className="shrink-0 border-l border-transparent pl-1"
             style={{ width: `${pct(b.to) - pct(b.from)}%` }}
           >
-            ৳{(b.paisaPerUnit / 100).toFixed(2)}
+            {money(b.paisaPerUnit)}
           </span>
         ))}
       </div>
-      <p className="mt-1 text-xs text-ink-500">
-        Pale block: the month before this day. Solid block: the units this day added. The
-        counter is per calendar month and a recharge never resets it.
-      </p>
+      {!compact && (
+        <p className="mt-1 text-xs text-ink-500">
+          Pale: the month before this day · solid: this day · the counter resets to{' '}
+          {money(SLABS[0].paisaPerUnit)} on the 1st and a recharge never resets it.
+        </p>
+      )}
     </div>
   )
 }
@@ -177,6 +168,7 @@ export default function BalanceChart() {
   })
   const [hoverIndex, setHoverIndex] = useState(null)
   const narrow = useNarrow()
+  const { ref: revealRef, shown } = useReveal()
   const box = narrow ? NARROW : WIDE
 
   const rows = sim?.rows ?? []
@@ -309,7 +301,12 @@ export default function BalanceChart() {
   }
 
   return (
-    <section className="w-full">
+    <section
+      ref={revealRef}
+      className={`w-full rounded-card border border-ink-300/60 bg-white p-5 dark:bg-ink-900/40 reveal ${
+        shown ? 'reveal-in' : ''
+      }`}
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold tracking-tight">Balance, day by day</h2>
         <p className="text-sm text-ink-500">
@@ -320,13 +317,8 @@ export default function BalanceChart() {
         </p>
       </div>
 
-      {/* The tariff is restated in the footer and in the day detail, so the
-          panel head only needs to say what the line is. */}
-      <Explainer label="How each day is charged">
-        Each day is charged at the slab the calendar month has reached. The demand charge and meter
-        rent are taken once a month, on that month&rsquo;s first recharge. VAT is 5% of the energy
-        amount only, never of the fixed charges.
-      </Explainer>
+      {/* No preamble: the footer carries the tariff, the day detail below shows
+          it being applied, and the legend names every mark. */}
 
       {/* The chart. role=img with a written description keeps it meaningful to a
           screen reader; the interactive detail below carries the same numbers. */}
@@ -505,12 +497,41 @@ export default function BalanceChart() {
       <div className="mt-4 rounded-card border border-ink-300/60 bg-ink-100/60 p-3 dark:bg-ink-900/60">
         {detail ? (
           <>
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-medium">{formatDay(detail.date)}</h3>
-              <p className="text-xs text-ink-500">
-                {untouched ? 'latest reading' : hoverIndex !== null && !row ? 'hovering' : 'selected'} · day{' '}
-                {rows.findIndex((r) => r.date === detail.date) + 1} of {rows.length}
-              </p>
+              {/* A day at a time, without a pointer or a keyboard — the phone
+                  case. The buttons act on the selection, so the detail below
+                  and the marker on the chart move together. */}
+              <div className="flex items-center gap-1 text-xs text-ink-500">
+                <span className="mr-1">
+                  {untouched ? 'latest reading' : hoverIndex !== null && !row ? 'hovering' : 'selected'} ·
+                  day {number(rows.findIndex((r) => r.date === detail.date) + 1)} of {number(rows.length)}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Previous day"
+                  disabled={rows.findIndex((r) => r.date === detail.date) <= 0}
+                  onClick={() => {
+                    const i = rows.findIndex((r) => r.date === detail.date)
+                    if (i > 0) selectDay(rows[i - 1].date)
+                  }}
+                  className="flex size-8 items-center justify-center rounded-lg border border-ink-300/60 text-ink-700 hover:border-accent/60 hover:text-accent disabled:opacity-40 dark:text-ink-300"
+                >
+                  <ChevronLeft className="size-4" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next day"
+                  disabled={rows.findIndex((r) => r.date === detail.date) >= rows.length - 1}
+                  onClick={() => {
+                    const i = rows.findIndex((r) => r.date === detail.date)
+                    if (i < rows.length - 1) selectDay(rows[i + 1].date)
+                  }}
+                  className="flex size-8 items-center justify-center rounded-lg border border-ink-300/60 text-ink-700 hover:border-accent/60 hover:text-accent disabled:opacity-40 dark:text-ink-300"
+                >
+                  <ChevronRight className="size-4" aria-hidden="true" />
+                </button>
+              </div>
             </div>
 
             <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">

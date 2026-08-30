@@ -9,44 +9,40 @@
  * what is the next unit about to cost — so they share a panel and a month.
  *
  * Every figure is summed from the simulation's own rows. Nothing is recomputed
- * here, so the bill cannot drift from the balance line above it.
+ * here, so the bill cannot drift from the balance line.
+ *
+ * The month is a row of chips rather than a dropdown: six months fit on one line,
+ * one tap changes the bill, and the chip you are on is visible without opening
+ * anything. The slab position is the same ladder the balance step draws, so the
+ * two panels teach the rule with one picture.
  */
 import { useMemo, useState } from 'react'
 import { AlertTriangle, Receipt } from 'lucide-react'
-import { useDisplay } from '../lib/display.jsx'
+import { useDisplay, Money } from '../lib/display.jsx'
 import { useCase } from '../lib/store.js'
-import { SLABS, DEMAND_CHARGE_PAISA, METER_RENT_PAISA } from '../lib/tariff.js'
-
-const monthOf = (iso) => iso.slice(0, 7)
-
-const monthLabel = (m) =>
-  new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-GB', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  })
+import { useReveal } from '../lib/useReveal.js'
+import { SLABS, DEMAND_CHARGE_PAISA, METER_RENT_PAISA, VAT_PERCENT, monthOf } from '../lib/tariff.js'
+import { monthLabel, monthShort, plural } from '../lib/format.js'
+import { SlabLadder } from './BalanceChart.jsx'
 
 /** Units left in the band the month is currently in, and what comes after it. */
 function slabPosition(units) {
-  let floor = 0
-  for (const band of SLABS) {
+  for (let i = 0; i < SLABS.length; i++) {
+    const band = SLABS[i]
     if (units < band.upTo) {
-      const next = SLABS[SLABS.indexOf(band) + 1]
+      const next = SLABS[i + 1]
       return {
         rate: band.paisaPerUnit,
         unitsToNext: band.upTo === Infinity ? null : band.upTo - units,
         nextRate: next ? next.paisaPerUnit : null,
-        bandFrom: floor,
-        bandTo: band.upTo,
       }
     }
-    floor = band.upTo
   }
   return { rate: SLABS.at(-1).paisaPerUnit, unitsToNext: null, nextRate: null }
 }
 
 function Line({ label, hint, paisa, strong = false }) {
-  const { money, number } = useDisplay()
+  const { money } = useDisplay()
   return (
     <div
       className={`flex items-baseline justify-between gap-4 py-2 ${
@@ -55,7 +51,7 @@ function Line({ label, hint, paisa, strong = false }) {
     >
       <span className="min-w-0">
         <span className={strong ? '' : 'text-ink-700 dark:text-ink-300'}>{label}</span>
-        {hint && <span className="mt-0.5 block text-xs text-ink-500">{hint}</span>}
+        {hint && <span className="mt-0.5 block text-xs font-normal text-ink-500">{hint}</span>}
       </span>
       <span className="shrink-0 tabular-nums">{money(paisa)}</span>
     </div>
@@ -65,6 +61,7 @@ function Line({ label, hint, paisa, strong = false }) {
 export default function MonthBill() {
   const { money, number } = useDisplay()
   const { kase, sim } = useCase()
+  const { ref, shown } = useReveal()
   const rows = sim?.rows ?? []
 
   const months = useMemo(() => [...new Set(rows.map((r) => monthOf(r.date)))], [rows])
@@ -74,23 +71,20 @@ export default function MonthBill() {
   const bill = useMemo(() => {
     if (!month) return null
     const inMonth = rows.filter((r) => monthOf(r.date) === month)
-    const energy = inMonth.reduce((s, r) => s + r.energyPaisa, 0)
-    const vat = inMonth.reduce((s, r) => s + r.vatPaisa, 0)
-    const fixed = inMonth.reduce((s, r) => s + r.fixedPaisa, 0)
-    const recharged = inMonth.reduce((s, r) => s + r.rechargePaisa, 0)
-    const units = inMonth.reduce((s, r) => s + r.units, 0)
-    const chargedMonth = fixed > 0
+    const sum = (k) => inMonth.reduce((s, r) => s + r[k], 0)
+    const energy = sum('energyPaisa')
+    const vat = sum('vatPaisa')
+    const fixed = sum('fixedPaisa')
     return {
-      inMonth,
-      units,
+      units: sum('units'),
       energy,
       vat,
       fixed,
-      recharged,
-      chargedMonth,
+      recharged: sum('rechargePaisa'),
+      chargedMonth: fixed > 0,
       total: energy + vat + fixed,
-      opening: inMonth[0] ? inMonth[0].balancePaisa - inMonth[0].rechargePaisa + inMonth[0].fixedPaisa + inMonth[0].energyPaisa + inMonth[0].vatPaisa : 0,
       closing: inMonth.at(-1)?.balancePaisa ?? 0,
+      days: inMonth.length,
     }
   }, [rows, month])
 
@@ -102,104 +96,109 @@ export default function MonthBill() {
   const closeToNext = pos.unitsToNext !== null && pos.unitsToNext <= 40
 
   return (
-    <section aria-labelledby="month-bill-heading" className="w-full">
-      <div className="rounded-card border border-ink-300/60 bg-white p-5 shadow-sm dark:bg-ink-900/40">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2
-              id="month-bill-heading"
-              className="flex items-center gap-2 text-lg font-semibold tracking-tight"
-            >
-              <Receipt className="size-5 text-accent" aria-hidden="true" />
-              One month&rsquo;s bill
-            </h2>
-            <p className="mt-1 text-sm text-ink-500">
-              What {monthLabel(month)} actually cost the meter, split the way the tariff
-              charges it.
-            </p>
-          </div>
-          <label className="text-sm">
-            <span className="sr-only">Month</span>
-            <select
-              className="rounded-xl border border-ink-300/70 bg-white px-3 py-2 text-sm font-medium focus:border-accent dark:bg-ink-900/40"
-              value={month}
-              onChange={(e) => setPicked(e.target.value)}
-            >
-              {months.map((m) => (
-                <option key={m} value={m}>
-                  {monthLabel(m)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+    <section
+      ref={ref}
+      aria-labelledby="month-bill-heading"
+      className={`w-full rounded-card border border-ink-300/60 bg-white p-5 dark:bg-ink-900/40 reveal ${
+        shown ? 'reveal-in' : ''
+      }`}
+    >
+      <h2 id="month-bill-heading" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+        <Receipt className="size-5 text-accent" aria-hidden="true" />
+        One month&rsquo;s bill
+      </h2>
 
-        <div className="mt-4 text-sm">
+      {/* Month chips. One row, one tap, and the current one is always visible. */}
+      <div role="group" aria-label="Month" className="mt-3 flex flex-wrap gap-1.5">
+        {months.map((m) => {
+          const active = m === month
+          return (
+            <button
+              key={m}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setPicked(m)}
+              className={`min-h-11 rounded-full border px-3 text-sm font-medium sm:min-h-0 sm:py-1.5 ${
+                active
+                  ? 'border-accent bg-accent text-white'
+                  : 'border-ink-300/60 text-ink-700 hover:border-accent/60 hover:text-accent dark:text-ink-300'
+              }`}
+            >
+              {monthShort(m)}
+            </button>
+          )
+        })}
+      </div>
+
+      <div aria-live="polite">
+        <p className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="text-3xl font-semibold tracking-tight tabular-nums">
+            <Money paisa={bill.total} />
+          </span>
+          <span className="text-sm text-ink-500">
+            {monthLabel(month)} · {plural(bill.units, 'unit', number)} over {plural(bill.days, 'day', number)}
+          </span>
+        </p>
+
+        <div className="mt-3 text-sm">
           <Line
             label="Energy"
-            hint={`${number(bill.units)} units, each charged at the slab the month had reached`}
+            hint={`${number(bill.units)} units, each at the slab the month had reached`}
             paisa={bill.energy}
           />
           <Line
             label="Demand charge"
-            hint={bill.chargedMonth ? 'once this month, on its first recharge' : 'not charged — no recharge this month'}
+            hint={bill.chargedMonth ? 'once, on the first recharge' : 'not charged — no recharge this month'}
             paisa={bill.chargedMonth ? DEMAND_CHARGE_PAISA : 0}
           />
           <Line
             label="Meter rent"
-            hint={bill.chargedMonth ? 'once this month, on its first recharge' : 'not charged — no recharge this month'}
+            hint={bill.chargedMonth ? 'once, on the first recharge' : 'not charged — no recharge this month'}
             paisa={bill.chargedMonth ? METER_RENT_PAISA : 0}
           />
-          <Line label="VAT" hint="5% of the energy amount only" paisa={bill.vat} />
+          <Line label="VAT" hint={`${VAT_PERCENT}% of energy only`} paisa={bill.vat} />
           <Line label={`Total for ${monthLabel(month)}`} paisa={bill.total} strong />
         </div>
 
-        <p className="mt-3 text-xs text-ink-500">
-          Recharged this month: {money(bill.recharged)} · balance at the end of the month{' '}
-          {money(bill.closing)}.
+        <p className="mt-2 text-xs text-ink-500">
+          Recharged {money(bill.recharged)} · {money(bill.closing)} left at month end.
         </p>
+      </div>
 
-        {/* Bonus: the slab warning. */}
-        <div
-          className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
-            closeToNext ? 'border-sand bg-sand-soft' : 'border-ink-300/60'
-          }`}
-        >
-          <p className="flex items-start gap-2">
-            {closeToNext && (
-              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-ink-900 dark:text-ink-50" aria-hidden="true" />
+      {/* Bonus: the slab warning, on the same ladder the balance step draws. */}
+      <div
+        className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
+          closeToNext ? 'border-sand bg-sand-soft text-ink-900 dark:text-ink-50' : 'border-ink-300/60'
+        }`}
+      >
+        <p className="flex items-start gap-2">
+          {closeToNext && (
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          )}
+          <span>
+            {pos.unitsToNext === null ? (
+              <>
+                In the top band at <strong className="font-medium">{money(pos.rate)}</strong> a unit.
+                No higher slab — it stays here until the 1st, when the counter resets to{' '}
+                <strong className="font-medium">{money(SLABS[0].paisaPerUnit)}</strong>.
+              </>
+            ) : closeToNext ? (
+              <>
+                Only <strong className="font-medium">{plural(pos.unitsToNext, 'unit', number)}</strong>{' '}
+                left at <strong className="font-medium">{money(pos.rate)}</strong>. The unit after
+                them costs <strong className="font-medium">{money(pos.nextRate)}</strong> —{' '}
+                {money(pos.nextRate - pos.rate)} more, until the 1st.
+              </>
+            ) : (
+              <>
+                At <strong className="font-medium">{money(pos.rate)}</strong> a unit, with{' '}
+                {number(pos.unitsToNext)} units left before the rate steps up to{' '}
+                <strong className="font-medium">{money(pos.nextRate)}</strong>.
+              </>
             )}
-            <span>
-              {pos.unitsToNext === null ? (
-                <>
-                  {monthLabel(month)} is in the top band at{' '}
-                  <strong className="font-medium">{money(pos.rate)}</strong> a unit. There is
-                  no higher slab — the rate stays here until the 1st, when the counter resets to{' '}
-                  <strong className="font-medium">{money(SLABS[0].paisaPerUnit)}</strong>.
-                </>
-              ) : closeToNext ? (
-                <>
-                  Only{' '}
-                  <strong className="font-medium">
-                    {pos.unitsToNext} {pos.unitsToNext === 1 ? 'unit' : 'units'}
-                  </strong>{' '}
-                  left in this slab. They cost{' '}
-                  <strong className="font-medium">{money(pos.rate)}</strong> each; the unit
-                  after them costs{' '}
-                  <strong className="font-medium">{money(pos.nextRate)}</strong> —{' '}
-                  {money(pos.nextRate - pos.rate)} more, and it stays there until the 1st.
-                </>
-              ) : (
-                <>
-                  {monthLabel(month)} used {number(bill.units)} units and ended
-                  at <strong className="font-medium">{money(pos.rate)}</strong> a unit.
-                  There are {number(pos.unitsToNext)} units left in that slab before the rate steps up
-                  to <strong className="font-medium">{money(pos.nextRate)}</strong>.
-                </>
-              )}
-            </span>
-          </p>
-        </div>
+          </span>
+        </p>
+        <SlabLadder unitsBefore={bill.units} unitsAfter={bill.units} month={month} compact />
       </div>
     </section>
   )
