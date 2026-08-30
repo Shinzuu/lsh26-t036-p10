@@ -30,6 +30,9 @@ const formatDate = (d) =>
     year: 'numeric',
     timeZone: 'UTC',
   })
+/** "1 recharge" / "18 recharges" — a count and its noun, agreeing. */
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+
 const formatBDT = (n) =>
   `৳${n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -97,8 +100,8 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
             Household <span className="font-mono text-accent">{kase.case_id}</span>
           </h2>
           <p className="text-sm text-ink-500">
-            {kase.days.length} daily readings · {formatDate(first)} to {formatDate(last)} ·{' '}
-            {kase.recharges.length} recharges
+            {plural(kase.days.length, 'daily reading')} · {formatDate(first)} to{' '}
+            {formatDate(last)} · {plural(kase.recharges.length, 'recharge')}
           </p>
         </div>
 

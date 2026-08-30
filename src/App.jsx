@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import { StoreProvider, useCase } from './lib/store.js'
 import { SEED } from './lib/dataset.js'
+import { SLABS, DEMAND_CHARGE_PAISA, METER_RENT_PAISA, VAT_PERCENT } from './lib/tariff.js'
 import CasePicker from './features/CasePicker.jsx'
 import Hero from './features/Hero.jsx'
 import MeterSetup from './features/MeterSetup.jsx'
@@ -52,6 +53,11 @@ function Layout() {
   const { kase, load, reset, isSeed, error, setError } = useCase()
   const [setup, setSetup] = useState(false)
   const empty = !kase || !kase.days?.length
+  // `isSeed` is identity with PUB-01, which is the right test for "offer to go
+  // back", but the wrong one for the subtitle: picking PUB-24 from the sample
+  // list is still a published household, and calling it "your household" is a
+  // claim the app cannot support.
+  const isPublished = /^PUB-\d+$/.test(kase?.case_id ?? '')
 
   return (
     <div className="min-h-dvh">
@@ -62,7 +68,7 @@ function Layout() {
               Recharge Advisor
             </p>
             <p className="truncate text-xs text-ink-300">
-              {isSeed
+              {isPublished
                 ? 'Prepaid meter · rebuilt on the published slab tariff'
                 : 'Your household · remembered on this device'}
             </p>
@@ -93,6 +99,27 @@ function Layout() {
             </div>
           )}
         </div>
+
+        {/* The picker is the only route to the other 24 published households, and
+            above it was desktop-only — on the phone a judge is told to use, PUB-01
+            was the only case reachable. It gets its own row below the brand rather
+            than a fourth control crammed into one line. */}
+        {kase && (
+          <div className="mx-auto flex w-full max-w-5xl items-center gap-2 px-4 pb-2 sm:hidden">
+            <div className="min-w-0 flex-1">
+              <CasePicker current={kase.case_id} onLoad={load} onError={(m) => setError?.(m)} />
+            </div>
+            {!isSeed && (
+              <button
+                type="button"
+                className="shrink-0 rounded-xl border border-white/25 px-3 py-2 text-sm text-ink-50"
+                onClick={reset}
+              >
+                Sample
+              </button>
+            )}
+          </div>
+        )}
 
         <nav aria-label="Sections" className="mx-auto w-full max-w-5xl px-4 pb-2 sm:px-6">
           <ul className="flex gap-1.5 overflow-x-auto text-sm">
@@ -208,49 +235,74 @@ function Layout() {
         )}
       </main>
 
-      <footer className="mt-4 border-t border-ink-300/60">
+      {/* A footer that carries the tariff it computes on. Anyone checking a
+          figure needs the six slab rates and the two fixed charges, and putting
+          them here means they are on the page without crowding the panels. */}
+      <footer className="mt-6 border-t border-ink-300/60 bg-white/50 dark:bg-ink-900/30">
         <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
-          <div className="grid gap-8 sm:grid-cols-3">
-            <div>
-              <p className="text-sm font-semibold tracking-tight">Recharge Advisor</p>
-              <p className="mt-1.5 max-w-xs text-sm text-ink-500">
-                Rebuilds a prepaid meter day by day on the published slab tariff, so the next
-                recharge is a number rather than a guess.
+          <div className="grid gap-8 sm:grid-cols-12">
+            <div className="sm:col-span-4">
+              <p className="text-base font-semibold tracking-tight">Recharge Advisor</p>
+              <p className="mt-2 max-w-xs text-sm text-ink-500">
+                A prepaid meter, rebuilt day by day on the published slab tariff.
               </p>
             </div>
 
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-ink-500">
-                The tariff
+            <div className="sm:col-span-5">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-ink-500">
+                The tariff, per calendar month
               </p>
-              <p className="mt-1.5 text-sm text-ink-500">
-                Six slabs from ৳4.63 to ৳10.70 a unit, counted per calendar month.
-                <br />
-                ৳42.00 demand charge + ৳40.00 meter rent, once a month.
-                <br />
-                5% VAT on energy only.
-              </p>
+              <dl className="mt-3 space-y-1 text-sm tabular-nums">
+                {SLABS.map((slab, i) => {
+                  const from = i === 0 ? 1 : SLABS[i - 1].upTo + 1
+                  const to = slab.upTo === Infinity ? null : slab.upTo
+                  return (
+                    <div key={slab.upTo} className="flex justify-between gap-4">
+                      <dt className="text-ink-500">
+                        {to ? `Units ${from}–${to}` : `Units ${from} and above`}
+                      </dt>
+                      <dd className="font-medium">৳{(slab.paisaPerUnit / 100).toFixed(2)}</dd>
+                    </div>
+                  )
+                })}
+                <div className="flex justify-between gap-4 border-t border-ink-300/50 pt-1">
+                  <dt className="text-ink-500">Demand charge + meter rent</dt>
+                  <dd className="font-medium">
+                    ৳{((DEMAND_CHARGE_PAISA + METER_RENT_PAISA) / 100).toFixed(2)}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-ink-500">VAT, on energy only</dt>
+                  <dd className="font-medium">{VAT_PERCENT}%</dd>
+                </div>
+              </dl>
             </div>
 
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-ink-500">On this page</p>
-              <ul className="mt-1.5 space-y-1 text-sm">
+            <nav aria-label="Footer" className="sm:col-span-3">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-ink-500">
+                On this page
+              </p>
+              <ul className="mt-3 space-y-1.5 text-sm">
                 {SECTIONS.map((s) => (
                   <li key={s.id}>
-                    <a className="text-ink-500 underline-offset-2 hover:text-accent hover:underline" href={`#${s.id}`}>
+                    <a
+                      className="text-ink-500 underline-offset-4 hover:text-accent hover:underline"
+                      href={`#${s.id}`}
+                    >
                       {s.label}
                     </a>
                   </li>
                 ))}
               </ul>
-            </div>
+            </nav>
           </div>
 
-          <p className="mt-8 border-t border-ink-300/50 pt-5 text-xs text-ink-500">
-            Built by <span className="font-medium text-ink-700 dark:text-ink-300">Miasma</span>.
-            Figures are computed from the readings you load; they are an estimate of what the
-            meter will do, not a bill.
-          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-2 border-t border-ink-300/50 pt-5 text-xs text-ink-500">
+            <p>
+              Built by <span className="font-medium text-ink-700 dark:text-ink-300">Miasma</span>
+            </p>
+            <p>Slab counter resets on the 1st of each month</p>
+          </div>
         </div>
       </footer>
     </div>

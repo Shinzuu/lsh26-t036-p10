@@ -93,8 +93,18 @@ export default function MeterSetup({ onLoad, onCancel }) {
 
   function submit(e) {
     e.preventDefault()
+    // These run in place of native constraint validation (the form is
+    // noValidate), so between them they have to cover every field a person can
+    // get wrong — an unchecked one now fails deeper, inside buildCase.
+    if (!asOf) return setProblem('Pick the date your readings run up to.')
     if (!(Number(dailyUnits) > 0)) return setProblem('Enter how many units you use on a typical day.')
+    if (!Number.isFinite(Number(openingBalance)) || Number(openingBalance) < 0) {
+      return setProblem('The balance you started with cannot be negative.')
+    }
+    if (!targetDate) return setProblem('Pick the date you want the balance to last until.')
     if (targetDate <= asOf) return setProblem('The date you want to last until must be after today.')
+    const badRecharge = recharges.find((r) => Number(r.amount) < 0)
+    if (badRecharge) return setProblem('A recharge amount cannot be negative.')
     try {
       onLoad(buildCase({ name, asOf, months: Number(months), dailyUnits: Number(dailyUnits), openingBalance, recharges, targetDate }))
     } catch (err) {
@@ -107,6 +117,13 @@ export default function MeterSetup({ onLoad, onCancel }) {
   return (
     <form
       onSubmit={submit}
+      /* The `min` attributes below still drive the pickers, but they must not
+         drive the *errors*: native constraint validation fires first, which
+         both bypasses the messages written below and renders them in the
+         browser's own bubble — "Value must be 08/30/2026 or later", in US date
+         order, on a page that writes every other date as 30 August 2026. The
+         checks in `submit` cover the same ground and say it in our own words. */
+      noValidate
       className="rounded-card border border-ink-300/60 bg-white p-5 shadow-sm dark:bg-ink-900/40"
       aria-labelledby="meter-setup-heading"
     >
