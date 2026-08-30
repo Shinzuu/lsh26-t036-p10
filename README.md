@@ -44,21 +44,33 @@ and the first is used. Reloading the page restores the seed, because nothing is 
 
 ## The four required items
 
-1. **A household with at least six months of daily unit readings and its recharge
-   history**, including a light month, a heavy summer month, and a month where a large
-   recharge falls in the last week. The three months are computed from the data and
-   labelled on screen. — *status pending*
-2. **The balance rebuilt day by day** on the stated tariff: each day's units charged at the
-   slab the month's running total has reached, the demand charge and meter rent taken on
-   the first recharge of each month, VAT added, shown as a line with every recharge marked.
-   — *status pending*
-3. **The family's two questions** — the date the balance runs out at their usual daily use,
-   and the amount to recharge today to last until a chosen date, broken into energy, the
-   part caused by being in a higher slab, fixed charges and VAT. — *status pending*
-4. **The two recharge habits compared** over the same three months on identical
-   consumption, showing which costs less and by how much. — *status pending*
+All four work on the live URL. Each line names what to click and the number you should see.
 
-*(Each line gets a tick and a one-sentence proof naming what to click, filled at the freeze.)*
+1. ✅ **A household with at least six months of daily unit readings and its recharge
+   history**, including a light month, a heavy summer month, and a month where a large
+   recharge falls in the last week. *Proof: the page opens on case PUB-01 — 181 daily
+   readings from 1 Jan to 30 Jun 2026 and 18 recharges. The months line labels 2026-01 the
+   lightest (129 units), 2026-05 the heaviest (673 units), and 2026-05 the month with a
+   large late recharge (৳4,300.00 on 26 May, inside its last seven days). All three are
+   computed from whichever case is loaded — paste PUB-02 and they move.*
+2. ✅ **The balance rebuilt day by day** on the stated tariff, shown as a line with every
+   recharge marked. *Proof: the balance line covers the whole six months with a marker at
+   each of the 18 recharges. Click any day for its units, the slab rate charged, the
+   month's running total and the closing balance; click the 1st of a month and the running
+   total has reset to that day's units with the rate back at ৳4.63. Over PUB-01: energy
+   ৳13,844.79, VAT ৳692.24, fixed charges ৳492.00 — six months at ৳82.00 — and a closing
+   balance of ৳2,080.97 on 30 June.*
+3. ✅ **The family's two questions.** *Proof: at 19 units a day the balance runs out on
+   20 July 2026, with the assumption printed beside it. Set the target date to 13 Aug 2026
+   and those days cost ৳5,600.70 — energy ৳3,870.68, the part caused by being in a higher
+   slab ৳1,307.13, fixed charges ৳164.00, VAT ৳258.89 — leaving ৳3,519.73 to recharge today
+   after the ৳2,080.97 already on the meter. The four parts add up on screen.*
+4. ✅ **The two recharge habits compared** over the same three months on identical
+   consumption. *Proof: on PUB-01 both habits cost ৳11,815.37 — equal, and equal is the
+   correct answer here, because both recharged in all three months. Paste PUB-02 and the
+   low-balance habit costs ৳82.00 less, exactly one month's demand charge and meter rent,
+   because it recharged in only two of the three months. Energy and VAT are identical on
+   both sides in every one of the 25 published cases, as clarification R-16 requires.*
 
 ## The tariff implemented
 
