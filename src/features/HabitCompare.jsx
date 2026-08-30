@@ -109,7 +109,11 @@ export default function HabitCompare({ kase: kaseProp }) {
     )
   }
 
-  if (!result) {
+  // The engine placeholder answers "equal, ৳0.00" for every case. Rendering that
+  // as a result would look like a working comparison and read as a correct
+  // answer, since equal IS a correct answer here — so it must never be shown as
+  // one. Treated as not-yet-computed until the real engine lands.
+  if (!result || result.pending) {
     return (
       <Frame>
         <div className="space-y-2" aria-busy="true">
