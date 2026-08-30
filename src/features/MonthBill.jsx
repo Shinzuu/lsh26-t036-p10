@@ -13,8 +13,9 @@
  */
 import { useMemo, useState } from 'react'
 import { AlertTriangle, Receipt } from 'lucide-react'
+import { useDisplay } from '../lib/display.jsx'
 import { useCase } from '../lib/store.js'
-import { formatBDT, SLABS, DEMAND_CHARGE_PAISA, METER_RENT_PAISA } from '../lib/tariff.js'
+import { SLABS, DEMAND_CHARGE_PAISA, METER_RENT_PAISA } from '../lib/tariff.js'
 
 const monthOf = (iso) => iso.slice(0, 7)
 
@@ -45,6 +46,7 @@ function slabPosition(units) {
 }
 
 function Line({ label, hint, paisa, strong = false }) {
+  const { money, number } = useDisplay()
   return (
     <div
       className={`flex items-baseline justify-between gap-4 py-2 ${
@@ -55,12 +57,13 @@ function Line({ label, hint, paisa, strong = false }) {
         <span className={strong ? '' : 'text-ink-700 dark:text-ink-300'}>{label}</span>
         {hint && <span className="mt-0.5 block text-xs text-ink-500">{hint}</span>}
       </span>
-      <span className="shrink-0 tabular-nums">{formatBDT(paisa)}</span>
+      <span className="shrink-0 tabular-nums">{money(paisa)}</span>
     </div>
   )
 }
 
 export default function MonthBill() {
+  const { money, number } = useDisplay()
   const { kase, sim } = useCase()
   const rows = sim?.rows ?? []
 
@@ -134,7 +137,7 @@ export default function MonthBill() {
         <div className="mt-4 text-sm">
           <Line
             label="Energy"
-            hint={`${bill.units.toLocaleString('en-GB')} units, each charged at the slab the month had reached`}
+            hint={`${number(bill.units)} units, each charged at the slab the month had reached`}
             paisa={bill.energy}
           />
           <Line
@@ -152,8 +155,8 @@ export default function MonthBill() {
         </div>
 
         <p className="mt-3 text-xs text-ink-500">
-          Recharged this month: {formatBDT(bill.recharged)} · balance at the end of the month{' '}
-          {formatBDT(bill.closing)}.
+          Recharged this month: {money(bill.recharged)} · balance at the end of the month{' '}
+          {money(bill.closing)}.
         </p>
 
         {/* Bonus: the slab warning. */}
@@ -170,9 +173,9 @@ export default function MonthBill() {
               {pos.unitsToNext === null ? (
                 <>
                   {monthLabel(month)} is in the top band at{' '}
-                  <strong className="font-medium">{formatBDT(pos.rate)}</strong> a unit. There is
+                  <strong className="font-medium">{money(pos.rate)}</strong> a unit. There is
                   no higher slab — the rate stays here until the 1st, when the counter resets to{' '}
-                  <strong className="font-medium">{formatBDT(SLABS[0].paisaPerUnit)}</strong>.
+                  <strong className="font-medium">{money(SLABS[0].paisaPerUnit)}</strong>.
                 </>
               ) : closeToNext ? (
                 <>
@@ -181,17 +184,17 @@ export default function MonthBill() {
                     {pos.unitsToNext} {pos.unitsToNext === 1 ? 'unit' : 'units'}
                   </strong>{' '}
                   left in this slab. They cost{' '}
-                  <strong className="font-medium">{formatBDT(pos.rate)}</strong> each; the unit
+                  <strong className="font-medium">{money(pos.rate)}</strong> each; the unit
                   after them costs{' '}
-                  <strong className="font-medium">{formatBDT(pos.nextRate)}</strong> —{' '}
-                  {formatBDT(pos.nextRate - pos.rate)} more, and it stays there until the 1st.
+                  <strong className="font-medium">{money(pos.nextRate)}</strong> —{' '}
+                  {money(pos.nextRate - pos.rate)} more, and it stays there until the 1st.
                 </>
               ) : (
                 <>
-                  {monthLabel(month)} used {bill.units.toLocaleString('en-GB')} units and ended
-                  at <strong className="font-medium">{formatBDT(pos.rate)}</strong> a unit.
-                  There are {pos.unitsToNext} units left in that slab before the rate steps up
-                  to <strong className="font-medium">{formatBDT(pos.nextRate)}</strong>.
+                  {monthLabel(month)} used {number(bill.units)} units and ended
+                  at <strong className="font-medium">{money(pos.rate)}</strong> a unit.
+                  There are {number(pos.unitsToNext)} units left in that slab before the rate steps up
+                  to <strong className="font-medium">{money(pos.nextRate)}</strong>.
                 </>
               )}
             </span>

@@ -16,10 +16,10 @@
  * Owned by U3. Imports the engine and the store, never edits them.
  */
 import { useMemo, useState } from 'react'
-import NumberFlow from '@number-flow/react'
+import { useDisplay, Money } from '../lib/display.jsx'
 import { useCase } from '../lib/store.js'
 import Explainer from './Explainer.jsx'
-import { formatBDT, projectRunOut, requiredRecharge } from '../lib/tariff.js'
+import { projectRunOut, requiredRecharge } from '../lib/tariff.js'
 
 /** Lowest slab rate, in paisa — the baseline the "higher slab" part is measured against. */
 const BASE_RATE_PAISA = 463
@@ -74,6 +74,7 @@ function projectionStart(kase, sim) {
 }
 
 function Row({ label, hint, paisa, strong = false }) {
+  const { money, currency, numberLocale, number } = useDisplay()
   return (
     <div
       className={`flex items-baseline justify-between gap-4 py-2 ${
@@ -84,12 +85,13 @@ function Row({ label, hint, paisa, strong = false }) {
         <span className={strong ? '' : 'text-ink-700 dark:text-ink-300'}>{label}</span>
         {hint && <span className="mt-0.5 block text-xs text-ink-500">{hint}</span>}
       </span>
-      <span className="shrink-0 tabular-nums">{formatBDT(paisa)}</span>
+      <span className="shrink-0 tabular-nums">{money(paisa)}</span>
     </div>
   )
 }
 
 export default function Questions() {
+  const { money, currency, numberLocale, number } = useDisplay()
   const { kase, sim } = useCase()
   const [targetDate, setTargetDate] = useState(null)
   // A date typed for one household is meaningless for the next, so loading a
@@ -204,7 +206,7 @@ export default function Questions() {
         {/* The one-line version stays visible: an answer without its assumption
             is not checkable. The rest of the reasoning collapses. */}
         <p className="mt-3 text-xs text-ink-500">
-          At {kase.usual_daily_units} units a day, from {formatBDT(start.fromBalancePaisa)}, with no
+          At {number(kase.usual_daily_units)} units a day, from {money(start.fromBalancePaisa)}, with no
           further recharge.
         </p>
         <Explainer label="What this assumes">
@@ -241,16 +243,11 @@ export default function Questions() {
         ) : parts ? (
           <>
             <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums">
-              <NumberFlow
-                value={parts.netRequiredPaisa / 100}
-                format={{ style: 'currency', currency: 'BDT', currencyDisplay: 'narrowSymbol' }}
-                locale="en-GB"
-                aria-hidden="false"
-              />
+              <Money paisa={parts.netRequiredPaisa} />
             </p>
             <p className="mt-1 text-sm text-ink-500">
-              to cover {plural(parts.days, 'day')} at {kase.usual_daily_units} units a day, through{' '}
-              {longDate(target)} — after the {formatBDT(start.fromBalancePaisa)} already on the
+              to cover {plural(parts.days, 'day')} at {number(kase.usual_daily_units)} units a day, through{' '}
+              {longDate(target)} — after the {money(start.fromBalancePaisa)} already on the
               meter.
             </p>
             {parts.capped && (
@@ -292,15 +289,15 @@ export default function Questions() {
             >
               {reconciles ? (
                 <>
-                  The four parts add up: {formatBDT(parts.energyPaisa)} +{' '}
-                  {formatBDT(parts.higherSlabPaisa)} + {formatBDT(parts.fixedPaisa)} +{' '}
-                  {formatBDT(parts.vatPaisa)} = {formatBDT(parts.totalPaisa)}, less the{' '}
-                  {formatBDT(start.fromBalancePaisa)} already on the meter.
+                  The four parts add up: {money(parts.energyPaisa)} +{' '}
+                  {money(parts.higherSlabPaisa)} + {money(parts.fixedPaisa)} +{' '}
+                  {money(parts.vatPaisa)} = {money(parts.totalPaisa)}, less the{' '}
+                  {money(start.fromBalancePaisa)} already on the meter.
                 </>
               ) : (
                 <>
-                  The four parts sum to {formatBDT(sumPaisa)} but the total is{' '}
-                  {formatBDT(parts.totalPaisa)} — they do not reconcile.
+                  The four parts sum to {money(sumPaisa)} but the total is{' '}
+                  {money(parts.totalPaisa)} — they do not reconcile.
                 </>
               )}
             </p>

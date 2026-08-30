@@ -11,8 +11,9 @@
  */
 import { useMemo, useState } from 'react'
 import { Plus, ScanLine, Trash2 } from 'lucide-react'
+import { useDisplay } from '../lib/display.jsx'
 import { useCase } from '../lib/store.js'
-import { formatBDT } from '../lib/tariff.js'
+import { } from '../lib/tariff.js'
 
 const longDate = (iso) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', {
@@ -23,6 +24,7 @@ const longDate = (iso) =>
   })
 
 export default function MeterCheck() {
+  const { money, number } = useDisplay()
   const { kase, sim } = useCase()
   const rows = sim?.rows ?? []
   const [entries, setEntries] = useState([{ date: '', shown: '' }])
@@ -135,14 +137,14 @@ export default function MeterCheck() {
                       </td>
                     ) : (
                       <>
-                        <td className="py-2 pr-4 text-right tabular-nums">{formatBDT(c.shownPaisa)}</td>
-                        <td className="py-2 pr-4 text-right tabular-nums">{formatBDT(c.rebuilt)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{money(c.shownPaisa)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{money(c.rebuilt)}</td>
                         <td
                           className={`py-2 text-right tabular-nums ${
                             Math.abs(c.gap) < 100 ? 'text-ok' : 'text-ink-900 dark:text-ink-50'
                           }`}
                         >
-                          {c.gap === 0 ? 'exact' : `${c.gap > 0 ? '+' : ''}${formatBDT(c.gap)}`}
+                          {c.gap === 0 ? 'exact' : `${c.gap > 0 ? '+' : ''}${money(c.gap)}`}
                         </td>
                       </>
                     )}
@@ -157,14 +159,14 @@ export default function MeterCheck() {
                   <>The rebuild matches the meter to within a taka on every date given.</>
                 ) : worst.gap > 0 ? (
                   <>
-                    Our rebuild sits {formatBDT(Math.abs(worst.gap))} <strong>above</strong> the
+                    Our rebuild sits {money(Math.abs(worst.gap))} <strong>above</strong> the
                     meter on {longDate(worst.date)}. That direction usually means real usage ran
-                    heavier than the stated {kase.usual_daily_units} units a day, or a month
+                    heavier than the stated {number(kase.usual_daily_units)} units a day, or a month
                     carried charges the history does not show.
                   </>
                 ) : (
                   <>
-                    Our rebuild sits {formatBDT(Math.abs(worst.gap))} <strong>below</strong> the
+                    Our rebuild sits {money(Math.abs(worst.gap))} <strong>below</strong> the
                     meter on {longDate(worst.date)}. That direction usually means a recharge is
                     missing from the history — add it above and the line will move.
                   </>

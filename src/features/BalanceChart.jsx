@@ -17,9 +17,10 @@
  * path and only the recharge days and the selection get their own elements.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useDisplay } from '../lib/display.jsx'
 import { useCase, useDay } from '../lib/store.js'
 import { linePath, linearScale, niceTicks } from '../lib/chart-scale.js'
-import { formatBDT, monthOf, MONTHLY_FIXED_PAISA, SLABS } from '../lib/tariff.js'
+import { monthOf, MONTHLY_FIXED_PAISA, SLABS } from '../lib/tariff.js'
 import Explainer from './Explainer.jsx'
 
 /**
@@ -67,7 +68,7 @@ const formatMonth = (m) =>
   })
 
 /** Axis labels are taka, not paisa — no decimals, they are only for scale. */
-const axisTaka = (paisa) => `৳${Math.round(paisa / 100).toLocaleString('en-GB')}`
+const axisTaka = (paisa) => `৳${Math.round(paisa / 100)}`
 
 /** One number with its label. The unit of this panel's evidence. */
 function Stat({ label, value, hint, tone = 'default' }) {
@@ -118,7 +119,7 @@ function SlabLadder({ unitsBefore, unitsAfter, month }) {
       <div
         className="relative mt-2 h-7 w-full overflow-hidden rounded-lg border border-ink-300/60 bg-white dark:bg-ink-900/40"
         role="img"
-        aria-label={`${formatMonth(month)} has used ${unitsAfter} units, charged at ৳${(rateNow.paisaPerUnit / 100).toFixed(2)} per unit`}
+        aria-label={`${formatMonth(month)} has used ${number(unitsAfter)} units, charged at ৳${(rateNow.paisaPerUnit / 100).toFixed(2)} per unit`}
       >
         {bands.map((b, i) => (
           <div
@@ -158,9 +159,18 @@ function SlabLadder({ unitsBefore, unitsAfter, month }) {
 }
 
 export default function BalanceChart() {
+  const { money, number } = useDisplay()
   const { kase, sim } = useCase()
   const { selectedDate, selectDay, row } = useDay()
   const svgRef = useRef(null)
+  // The line traces itself once per household. Its own measured length feeds the
+  // dash animation, so the timing is right whatever shape the data makes.
+  const lineRef = useRef(null)
+  useEffect(() => {
+    const el = lineRef.current
+    if (!el?.getTotalLength) return
+    el.style.setProperty('--line-length', `${Math.ceil(el.getTotalLength())}`)
+  })
   const [hoverIndex, setHoverIndex] = useState(null)
   const narrow = useNarrow()
   const box = narrow ? NARROW : WIDE
@@ -281,8 +291,8 @@ export default function BalanceChart() {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold tracking-tight">Balance, day by day</h2>
         <p className="text-sm text-ink-500">
-          {rows.length} days · {recharges.length} recharges ·{' '}
-          <span className="tabular-nums">{formatBDT(sim.closingBalancePaisa)}</span> left on{' '}
+          {number(rows.length)} days · {number(recharges.length)} recharges ·{' '}
+          <span className="tabular-nums">{money(sim.closingBalancePaisa)}</span> left on{' '}
           {formatDay(rows.at(-1).date)}
         </p>
       </div>
@@ -379,13 +389,15 @@ export default function BalanceChart() {
 
           <path d={area} className="fill-accent/10" />
           <path
+            ref={lineRef}
+            key={rows[0].date + rows.length}
             d={path}
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
             strokeLinejoin="round"
             strokeLinecap="round"
-            className="text-accent"
+            className="draw-line text-accent"
             vectorEffect="non-scaling-stroke"
           />
 
@@ -454,7 +466,7 @@ export default function BalanceChart() {
               className="inline-block h-2 w-2 rounded-full border-2 border-ok"
               aria-hidden="true"
             />
-            first of the month — paid {formatBDT(MONTHLY_FIXED_PAISA)} demand charge + meter rent
+            first of the month — paid {money(MONTHLY_FIXED_PAISA)} demand charge + meter rent
           </span>
           <span>dashed line = month start, where the slab counter resets</span>
         </figcaption>
@@ -497,7 +509,7 @@ export default function BalanceChart() {
               />
               <Stat
                 label="Balance after"
-                value={formatBDT(detail.balancePaisa)}
+                value={money(detail.balancePaisa)}
                 tone={detail.balancePaisa < 0 ? 'danger' : 'default'}
                 hint={
                   detail.balancePaisa < 0 ? 'meter would have cut out' : 'closing balance that day'
@@ -512,13 +524,13 @@ export default function BalanceChart() {
             />
 
             <p className="mt-3 border-t border-ink-300/50 pt-2 text-xs text-ink-500">
-              Charged that day: energy {formatBDT(detail.energyPaisa)} + VAT{' '}
-              {formatBDT(detail.vatPaisa)}
+              Charged that day: energy {money(detail.energyPaisa)} + VAT{' '}
+              {money(detail.vatPaisa)}
               {detail.fixedPaisa > 0
-                ? ` + ${formatBDT(detail.fixedPaisa)} demand charge and meter rent (first recharge of ${formatMonth(monthOf(detail.date))})`
+                ? ` + ${money(detail.fixedPaisa)} demand charge and meter rent (first recharge of ${formatMonth(monthOf(detail.date))})`
                 : ''}
               {detail.rechargePaisa > 0
-                ? ` · recharged ${formatBDT(detail.rechargePaisa)}`
+                ? ` · recharged ${money(detail.rechargePaisa)}`
                 : ''}
             </p>
           </>
@@ -532,19 +544,19 @@ export default function BalanceChart() {
 
       {/* What the meter consumed over the whole period. */}
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-5">
-        <Stat label="Energy" value={formatBDT(sim.totals.energyPaisa)} />
-        <Stat label="VAT (5% of energy)" value={formatBDT(sim.totals.vatPaisa)} />
+        <Stat label="Energy" value={money(sim.totals.energyPaisa)} />
+        <Stat label="VAT (5% of energy)" value={money(sim.totals.vatPaisa)} />
         <Stat
           label="Fixed charges"
-          value={formatBDT(sim.totals.fixedPaisa)}
-          hint={`${sim.firstRechargeMonths.length} months × ${formatBDT(MONTHLY_FIXED_PAISA)}`}
+          value={money(sim.totals.fixedPaisa)}
+          hint={`${sim.firstRechargeMonths.length} months × ${money(MONTHLY_FIXED_PAISA)}`}
         />
-        <Stat label="Recharged" value={formatBDT(sim.totals.rechargedPaisa)} tone="ok" />
+        <Stat label="Recharged" value={money(sim.totals.rechargedPaisa)} tone="ok" />
         <Stat
           label="Closing balance"
-          value={formatBDT(sim.closingBalancePaisa)}
+          value={money(sim.closingBalancePaisa)}
           tone={sim.closingBalancePaisa < 0 ? 'danger' : 'default'}
-          hint={`opened at ${formatBDT(sim.openingBalancePaisa)}`}
+          hint={`opened at ${money(sim.openingBalancePaisa)}`}
         />
       </dl>
     </section>

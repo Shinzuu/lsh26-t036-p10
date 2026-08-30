@@ -17,14 +17,12 @@
  * plainly when they do rather than manufacturing a difference.
  */
 import { useMemo } from 'react'
-import NumberFlow from '@number-flow/react'
 import {
   compareHabits,
-  formatBDT,
   toPaisa,
   DEMAND_CHARGE_PAISA,
-  METER_RENT_PAISA,
-} from '../lib/tariff.js'
+  METER_RENT_PAISA } from '../lib/tariff.js'
+import { useDisplay, Money } from '../lib/display.jsx'
 import { useCase } from '../lib/store.js'
 import Explainer from './Explainer.jsx'
 
@@ -59,10 +57,11 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
  */
 function money(decimalString) {
   const paisa = toPaisa(decimalString)
-  return Number.isFinite(paisa) ? formatBDT(paisa) : '—'
+  return Number.isFinite(paisa) ? money(paisa) : '—'
 }
 
 export default function HabitCompare({ kase: kaseProp }) {
+  const { money, currency, numberLocale, number } = useDisplay()
   const store = useCase() ?? {}
   const kase = kaseProp ?? store.kase
 
@@ -155,7 +154,7 @@ export default function HabitCompare({ kase: kaseProp }) {
           Both habits run{' '}
           {flatSource ? (
             <>
-              on a flat {comparison.daily_units} units a day — this case names a source other than
+              on a flat {number(comparison.daily_units)} units a day — this case names a source other than
               its own readings
             </>
           ) : (
@@ -183,10 +182,10 @@ export default function HabitCompare({ kase: kaseProp }) {
         }`}
       >
         {equal ? (
-          <>Both habits cost exactly the same — {formatBDT(result.low.costPaisa)} over the {plural(monthCount, 'month')}.</>
+          <>Both habits cost exactly the same — {money(result.low.costPaisa)} over the {plural(monthCount, 'month')}.</>
         ) : (
           <>
-            {winner} costs {formatBDT(difference)} less over the {plural(monthCount, 'month')}.
+            {winner} costs {money(difference)} less over the {plural(monthCount, 'month')}.
           </>
         )}
       </p>
@@ -218,13 +217,13 @@ export default function HabitCompare({ kase: kaseProp }) {
             {lowMonths === 0 ? (
               <>
                 Neither habit triggered a recharge in these months, so neither paid the{' '}
-                {formatBDT(FIXED_PER_MONTH_PAISA)} demand charge and meter rent at all.
+                {money(FIXED_PER_MONTH_PAISA)} demand charge and meter rent at all.
               </>
             ) : (
               <>
                 Both habits triggered a first recharge in {lowMonths} of the{' '}
                 {plural(monthCount, 'month')}, so both paid the{' '}
-                {formatBDT(FIXED_PER_MONTH_PAISA)} demand charge and meter rent {times(lowMonths)}.
+                {money(FIXED_PER_MONTH_PAISA)} demand charge and meter rent {times(lowMonths)}.
               </>
             )}{' '}
             The two habits cost the same, and that is the correct answer here — there is no
@@ -234,9 +233,9 @@ export default function HabitCompare({ kase: kaseProp }) {
           <>
             The whole difference is fixed charges: recharging when low triggered a first
             recharge in {lowMonths} of the {plural(monthCount, 'month')} and recharging monthly in{' '}
-            {monthlyMonths}, so they paid the {formatBDT(FIXED_PER_MONTH_PAISA)} demand charge
+            {monthlyMonths}, so they paid the {money(FIXED_PER_MONTH_PAISA)} demand charge
             and meter rent {times(lowMonths)} and {times(monthlyMonths)} respectively. That is
-            the only source of the {formatBDT(difference)}.
+            the only source of the {money(difference)}.
           </>
         )}
       </p>
@@ -245,7 +244,7 @@ export default function HabitCompare({ kase: kaseProp }) {
         Energy and VAT are identical under both habits — the same units are burned against the same
         calendar-month slab counter, so <em>when</em> the meter is recharged cannot change the rate
         a unit is charged at. The only thing a habit can move is how many calendar months saw a
-        first recharge, and each of those costs {formatBDT(FIXED_PER_MONTH_PAISA)}. A comparison
+        first recharge, and each of those costs {money(FIXED_PER_MONTH_PAISA)}. A comparison
         that reported a slab saving would be wrong, not merely rounded differently.
       </Explainer>
     </Frame>
@@ -265,6 +264,7 @@ function Frame({ children }) {
 }
 
 function HabitCard({ title, rule, habit, monthCount, isCheaper }) {
+  const { money, currency, numberLocale, number } = useDisplay()
   const dates = habit?.rechargeDates ?? []
   return (
     <article
@@ -279,20 +279,16 @@ function HabitCard({ title, rule, habit, monthCount, isCheaper }) {
       <p className="mt-1 text-xs text-ink-500">{rule}</p>
 
       <dl className="mt-3 space-y-1 text-sm">
-        <Row label="Energy" value={formatBDT(habit?.energyPaisa ?? 0)} />
-        <Row label="VAT (5% of energy)" value={formatBDT(habit?.vatPaisa ?? 0)} />
+        <Row label="Energy" value={money(habit?.energyPaisa ?? 0)} />
+        <Row label="VAT (5% of energy)" value={money(habit?.vatPaisa ?? 0)} />
         <Row
           label={`Fixed charges (${habit?.monthsCharged ?? 0} of ${plural(monthCount, 'month')})`}
-          value={formatBDT(habit?.fixedPaisa ?? 0)}
+          value={money(habit?.fixedPaisa ?? 0)}
         />
         <div className="flex items-baseline justify-between border-t border-ink-300/60 pt-1 font-semibold">
           <dt>Total cost</dt>
           <dd className="tabular-nums">
-            <NumberFlow
-              value={(habit?.costPaisa ?? 0) / 100}
-              format={{ style: 'currency', currency: 'BDT', currencyDisplay: 'narrowSymbol' }}
-              locale="en-GB"
-            />
+            <Money paisa={habit?.costPaisa ?? 0} />
           </dd>
         </div>
       </dl>

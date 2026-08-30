@@ -5,10 +5,10 @@
  * what is left, when it runs out, and what to put in. Those sit at the top,
  * large, and everything below them is the working that justifies them.
  */
-import NumberFlow from '@number-flow/react'
 import { CalendarClock, Wallet, Zap } from 'lucide-react'
+import { useDisplay, Money } from '../lib/display.jsx'
 import { useCase } from '../lib/store.js'
-import { formatBDT, projectRunOut, requiredRecharge } from '../lib/tariff.js'
+import { projectRunOut, requiredRecharge } from '../lib/tariff.js'
 
 const nextDay = (iso) => {
   const d = new Date(`${iso}T00:00:00Z`)
@@ -48,6 +48,7 @@ function Figure({ icon: Icon, label, children, hint, tone = 'default' }) {
 }
 
 export default function Hero() {
+  const { money, currency, numberLocale, number } = useDisplay()
   const { kase, sim } = useCase()
   const last = sim?.rows?.at(-1)
   if (!kase || !last) return null
@@ -73,14 +74,10 @@ export default function Hero() {
           On the meter
         </p>
         <p className="font-meter mt-2 text-5xl font-semibold sm:text-6xl">
-          <NumberFlow
-            value={last.balancePaisa / 100}
-            format={{ style: 'currency', currency: 'BDT', currencyDisplay: 'narrowSymbol' }}
-            locale="en-GB"
-          />
+          <Money paisa={last.balancePaisa} />
         </p>
         <p className="mt-2 text-sm text-ink-500">
-          after {kase.days.length} days of readings, on {longDate(kase.today)}
+          after {number(kase.days.length)} days of readings, on {longDate(kase.today)}
         </p>
 
         <div className="rule my-4" />
@@ -89,14 +86,14 @@ export default function Hero() {
           <span className="text-ink-500">
             Using{' '}
             <strong className="font-medium text-ink-900 dark:text-ink-50">
-              {kase.usual_daily_units} units
+              {number(kase.usual_daily_units)} units
             </strong>{' '}
             a day
           </span>
           <span className="text-ink-500">
             Last recharge{' '}
             <strong className="font-medium text-ink-900 dark:text-ink-50">
-              {kase.recharges.length ? formatBDT(Math.round(parseFloat(kase.recharges.at(-1).amount_bdt) * 100)) : 'none'}
+              {kase.recharges.length ? money(Math.round(parseFloat(kase.recharges.at(-1).amount_bdt) * 100)) : 'none'}
             </strong>
             {kase.recharges.length ? ` on ${longDate(kase.recharges.at(-1).date)}` : ''}
           </span>
@@ -110,7 +107,7 @@ export default function Hero() {
           label="Runs out"
           hint={
             runOut.runsOutOn
-              ? `at ${kase.usual_daily_units} units a day, with no further recharge`
+              ? `at ${number(kase.usual_daily_units)} units a day, with no further recharge`
               : 'not within the projected period'
           }
         >
@@ -121,13 +118,9 @@ export default function Hero() {
           icon={Zap}
           label="Recharge today"
           tone="accent"
-          hint={`to last until ${longDate(kase.target_date)} — ${formatBDT(needed.totalPaisa)} of charges, less what is on the meter`}
+          hint={`to last until ${longDate(kase.target_date)} — ${money(needed.totalPaisa)} of charges, less what is on the meter`}
         >
-          <NumberFlow
-            value={needed.netRequiredPaisa / 100}
-            format={{ style: 'currency', currency: 'BDT', currencyDisplay: 'narrowSymbol' }}
-            locale="en-GB"
-          />
+          <Money paisa={needed.netRequiredPaisa} />
         </Figure>
       </div>
     </section>
