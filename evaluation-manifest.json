@@ -1,3 +1,82 @@
 {
-  "_TODO": "Replace this entire file with the organizer-supplied evaluation-manifest.json template (collected at 17:00) and fill it in: required declarations, per-member contributions, AI-tool use. It must be inside the final commit pushed before 22:00 — only the submitted SHA is judged (29 Aug Discord ruling)."
+  "team_id": "LSH26-T036",
+  "problem_id": "P10",
+  "repository_name": "lsh26-t036-p10",
+  "live_url": "https://lsh26-t036-p10.pages.dev",
+  "demo_video_url_optional": "",
+  "event_start_code": "LSH26-8490-C900",
+  "repository_created_before_release": false,
+  "pre_event_materials": [
+    "Generic React starter kit written by the team before the event and committed as the repository's first commit, 'Starter kit baseline'. Vite + React 19 + Tailwind 4 shell (index.html, src/main.jsx, src/App.jsx, src/app.css), a localStorage/Supabase storage adapter (src/lib/db.js), a library of thirteen generic self-contained capability modules with their own tests (src/recipes/), five accessible colour palettes (src/themes/), and helper scripts (scripts/preflight.sh, scripts/smoke-live.sh, scripts/compress-video.sh). It contains no solution to P10 or to any other released problem; it was written before the problems were known. Declared in full in EVENT.md.",
+    "Documentation templates from the same starter kit: README-TEMPLATE.md, SUBMISSION-TEMPLATE.md, LICENSES.md, BOARD.md, DEPLOY.md, CLAUDE.md."
+  ],
+  "sample_data": {
+    "loads_published_fixture": true,
+    "method": "seeded on start, plus file upload and paste",
+    "reset_instructions": "The published fixture case PUB-01 from P10_prepaid_meter_public.json is bundled at src/data/seed-p10.json and loads automatically on every page load, so the initial data is restored simply by reloading the page. Nothing is persisted to localStorage or to any server. To load a different case, paste its JSON object into the load box in the header or upload a file containing it; a file holding several cases is accepted and the first is used."
+  },
+  "problem_solving_method": "The tariff is the entire problem, so it is built as a pure module with a node --test suite written before any user interface, and the interface reads from it. All money is handled in integer paisa and converted to taka only at the render edge, because the balance compounds across 181 days and floating point drift would put every downstream answer slightly wrong. The organizers' published fixture shape was adopted directly as the application's data model rather than designing a schema and mapping onto it, so an unpublished case in the same shape loads without a translation layer. Each of the four required items is owned by exactly one unit on its own branch and its own files.",
+  "requirements": {
+    "R1": {
+      "status": "not_attempted",
+      "evidence": "Not attempted"
+    },
+    "R2": {
+      "status": "not_attempted",
+      "evidence": "Not attempted"
+    },
+    "R3": {
+      "status": "not_attempted",
+      "evidence": "Not attempted"
+    },
+    "R4": {
+      "status": "not_attempted",
+      "evidence": "Not attempted"
+    }
+  },
+  "team_members": [
+    {
+      "registered_name": "<FILL BEFORE SUBMISSION>",
+      "github_username": "Shinzuu",
+      "major_contribution": "<FILL BEFORE SUBMISSION>",
+      "evidence_paths_or_commits": []
+    },
+    {
+      "registered_name": "<FILL BEFORE SUBMISSION>",
+      "github_username": "RimjhimD",
+      "major_contribution": "<FILL BEFORE SUBMISSION>",
+      "evidence_paths_or_commits": []
+    },
+    {
+      "registered_name": "<FILL BEFORE SUBMISSION>",
+      "github_username": "MDRobiulhassan",
+      "major_contribution": "<FILL BEFORE SUBMISSION>",
+      "evidence_paths_or_commits": []
+    },
+    {
+      "registered_name": "<FILL BEFORE SUBMISSION>",
+      "github_username": "Dip-it11",
+      "major_contribution": "<FILL BEFORE SUBMISSION>",
+      "evidence_paths_or_commits": []
+    }
+  ],
+  "major_design_decisions": [
+    "The organizers' published fixture shape is the application's data model, rather than a schema of our own with a mapping layer, so that an unpublished case in the same shape loads unchanged.",
+    "All money is computed in integer paisa and formatted as taka only at the render edge. The balance compounds over 181 days of daily charges, and floating point drift there would put the run-out date and the habit comparison quietly wrong.",
+    "The slab counter is keyed to the calendar month and is never reset by a recharge, which is the single behaviour the problem statement warns produces the wrong number everywhere if inverted.",
+    "The demand charge and meter rent are applied once per calendar month on that month's first recharge, so a month with no recharge incurs neither \u2014 this is the only mechanism by which the two recharge habits can differ in cost.",
+    "For the required recharge breakdown, energy is every projected unit priced at the lowest slab and the higher-slab part is the real slab-aware cost minus that base, so the four parts reconcile exactly to the total. The problem does not define this baseline, so ours is stated on screen."
+  ],
+  "known_limitations": [
+    "<FILL BEFORE SUBMISSION>"
+  ],
+  "ai_tools_used": [
+    {
+      "tool": "Claude Code (Anthropic)",
+      "used_for": "Reading and reconciling the organizer documents, authoring the build specification in SPEC.md, and implementing units against it.",
+      "how_output_was_verified": "The tariff rules are covered by a node --test suite exercising every slab boundary, the calendar-month reset, and the once-per-month fixed charges. The habit comparison is additionally checked against an independently computed reference table of the expected answer for all 25 published cases, recorded at the end of SPEC.md. Every required item was checked by a team member on the deployed URL, not locally, before being recorded as done."
+    }
+  ],
+  "licenses_file": "LICENSES.md",
+  "declaration": "The information above is complete and truthful to the best of the team's knowledge."
 }

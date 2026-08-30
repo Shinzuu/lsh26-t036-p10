@@ -1,70 +1,72 @@
 # Board — who is doing what, right now
 
-**This file is the shared canvas between the four Claude sessions.** Chat and
-memory do not sync across devices; this file does. Update your row when your
-status changes, commit (`board: U2 building`), push. Pull before reading —
-a stale board is worse than no board.
+**This file is the shared canvas between the four Claude sessions on this repo.** Chat
+and memory do not sync across devices; this file does. Update your row when your status
+changes, commit (`board: U2 building`), push. Pull before reading — a stale board is
+worse than no board.
 
-**FREEZE: __:__** — set once, in absolute local time, before the first line of
-code, and never moved later. After freeze, only rollbacks and submission
-artifacts land, committed by the integrator alone. A freeze time that exists
-only in someone's head isn't a freeze — the 27 Aug drill had none written down
-anywhere, ran 19 minutes past its own unwritten target, and scored 0/10 on
-Speed for it.
+**Repo: `lsh26-t036-p10` · P10 Prepaid Meter Recharge Advisor · Tier 02**
+**Live: https://lsh26-t036-p10.pages.dev**
+**Integrator: shinzuu** — owns merges, deploys, and `src/App.jsx`, `src/lib/store.js`,
+`src/app.css`, `index.html`, `package.json`.
 
-| Unit | Bullet | Owner | Status | Last update (time + note) |
-|---|---|---|---|---|
-| U1 | 1 | shinzuu | pushed | 18:52 — branch `u1-household` pushed. seed-p10.json (PUB-01, 181 days), dataset.js (parseCase/parseCases/monthSummary), dataset.test.mjs (15 tests pass), DataSource.jsx (compiles, build passes). Needs the App.jsx wiring below before it is visible live. |
-| U2 | 2 | Rimjhim | building | 18:47 — branch `u2-tariff-engine` cut and pushed. Writing the tariff contract and `node --test` suite first, chart after. |
-| U3 | 3 | — | todo | — |
-| U4 | 4 | — | todo | — |
+**MERGE FREEZE: 21:15.** After it, no feature merges — only fixes the integrator
+explicitly requests, plus the submission artifacts.
 
-Status values: `todo` → `building` → `pushed` → **`done-live`**. A row only
-earns `done-live` when its note names the exact live-URL check performed —
-e.g. "verified live: submitted update, marker recoloured, no reload." "The
-crash stopped" is not `done-live`; "looks right" is not `done-live`. The drill
-lost a bullet at judging because a fix was marked done off a local check that
-was never re-run against the deployed URL.
+**SUBMIT AS SOON AS THE GATE PASSES.** The early bonus is measured from the Google Form
+receipt, not from any commit (organizer clarification: *"Commit times are not used."*).
+The gate is at least 3 of the 4 required items fully passing on **both** P08 and P10.
+The moment that is true on both repos, the team leader submits — do not wait for 4/4.
+The submission can be edited later, but the recorded time becomes the time of the edit.
+
+| Receipt | Bonus |
+|---|---|
+| 20:00 | 5.00 |
+| 20:30 | 3.75 |
+| 21:00 | 2.50 |
+| 21:30 | 1.25 |
+| 21:50+ | 0 |
+
+Read `SPEC.md` in full before building. It carries the four required items and the
+clarifications verbatim, the data model, the fixed engine and store export shapes, and
+the per-unit prompts.
+
+| Unit | Item | Owner | Branch | Status | Last update (time + note) |
+|---|---|---|---|---|---|
+| U1 | R1 — household, ≥6 months of daily readings + recharges, light/heavy/late-large months labelled | shinzuu | `u1-household` | pushed | 18:52 — branch pushed, 15 tests pass. MERGED into main at 18:46 by the integrator; awaiting deploy + live check before done-live. |
+| U2 | R2 — rebuild the balance day by day on the tariff, fixed charges on the month's first recharge, VAT, balance line with recharge markers | Rimjhim | `u2-tariff-engine` | building | 18:52 — branch cut off main and pushed. Writing the fixed engine contract in `src/lib/tariff.js` and the `node --test` suite before the chart, since U3 and U4 import it. |
+| U3 | R3 — run-out date, and the amount to recharge today split into energy / higher-slab / fixed / VAT | Robiul | `u3-questions` | todo | — |
+| U4 | R4 — compare the two recharge habits over three months on identical consumption | Dip | `u4-habit-compare` | todo | — |
+
+Status values: `todo` → `building` → `pushed` → **`done-live`**. A row only earns
+`done-live` when its note names the exact live-URL check performed — e.g. "verified live:
+opened S045's trace, AB printed for Biology, rule says absent". "The crash stopped" is
+not `done-live`; "looks right" is not `done-live`.
+
+## Rules that cost marks if broken
+
+- **Do not squash, delete or rewrite git history after 18:00.** Judges read the history.
+  Inside this repo use `git pull --no-rebase`, never `git pull --rebase`.
+- Integrator-only files are `src/App.jsx`, `src/lib/store.js`, `src/app.css`,
+  `index.html`, `package.json`. Need a change there? Post the exact diff below as a
+  blocker; do not make it yourself.
+- `BOARD.md` and `NOTES.md` are the only files committed directly to `main`.
+- No docs or polish commits while any required item is broken.
+- `bash scripts/preflight.sh` before every push.
 
 ## Blockers / requests to the integrator
 
 One line each, newest on top. The integrator clears these and deletes the line.
 
-- **U1 → integrator, 18:52. `src/App.jsx` must render `DataSource` or item 1 is
-  invisible on the live URL.** Exact change, on top of the kit baseline:
-
-  ```diff
-  -import Loop from './lib/Loop.jsx'
-  -import { backend } from './lib/db.js'
-  +import DataSource from './features/DataSource.jsx'
-
-  -const APP_NAME = 'Starter'
-  -const TAGLINE = 'Rename me before you demo.'
-  +const APP_NAME = 'Prepaid Meter Recharge Advisor'
-  +const TAGLINE = 'Where the money goes, and when to recharge next.'
-   ...
-       <main>
-  -      <Loop />
-  +      <DataSource />
-       </main>
-  ```
-
-  `DataSource` runs standalone (own state, seeded from PUB-01) and also accepts
-  `{ kase, error, onLoad }` — pass those once `src/lib/store.js` exists and it
-  becomes controlled with no further change here. The `backend === 'local'`
-  localStorage chip should go too: this app has no backend.
-- **U1 → integrator/operator, 18:52. `SPEC.md`, `NOTES.md` and `EVENT.md` are not
-  in this repo.** SPEC exists in the prep repo at `event/SPEC-P10.md`; I built from
-  that copy rather than committing someone else's file. `EVENT.md` is required in
-  the first event commit (team `LSH26-T036`, problem `P10`, start code
-  `LSH26-8490-C900`, declaration that the starter-kit baseline predates 18:00).
-- **U1 → whoever owns NOTES.md, 18:52.** The organizers' `format_note` for P10 is
-  truncated mid-sentence at "`source` `readings` uses the case's own", so a
-  `source` other than `"readings"` is undocumented. All 25 public cases use
-  `"readings"`. Worth one question in the support channel; U4 is the unit it hits.
+- (cleared 18:46 — `src/App.jsx` now renders `DataSource`, and `src/lib/store.js` exists. U1 is visible.)
 
 ## Notes — things everyone should know
 
-Gotchas found mid-build: API quirks, deploy traps, licence flags. One line each.
+Gotchas found mid-build: rule quirks, deploy traps, licence flags. One line each.
 
-- (none)
+- The shell, `src/lib/store.js` and a placeholder for every unit-owned file are merged. Your placeholder names you in a banner — replace the file wholesale, do not build around it.
+- `src/lib/tariff.js` currently holds signature-only stubs so the app builds and U3/U4 can lay out against real shapes. U2 replaces it entirely, keeping every export name. Its SLABS, DEMAND_CHARGE_PAISA, METER_RENT_PAISA and VAT_PERCENT constants are already correct, straight from the problem statement.
+- U1 is merged, so `SEED`, `parseCase`, `parseCases`, `monthSummary` and `dateRange` are available from `src/lib/dataset.js`, and the store seeds from the real 181-day household.
+- **Verify on your own branch's preview URL, no merge needed.** `npm run build && npx wrangler pages deploy dist --project-name lsh26-t036-p10 --branch <your-branch>` gives you `https://<your-branch>.lsh26-t036-p10.pages.dev`.
+- SPEC.md ends with a reference oracle for required item 4: the expected answer for all 25 published cases. Every difference is 0.00 or exactly 82.00 taka. Anything else means the implementation is wrong.
+- Work in integer paisa inside the engine. 4.63 taka is 463 paisa. Floats drift over 181 compounding days and put every downstream answer quietly wrong.
