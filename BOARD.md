@@ -34,9 +34,9 @@ the per-unit prompts.
 | Unit | Item | Owner | Branch | Status | Last update (time + note) |
 |---|---|---|---|---|---|
 | U1 | R1 — household, ≥6 months of daily readings + recharges, light/heavy/late-large months labelled | shinzuu | `u1-household` | pushed | 18:52 — branch pushed, 15 tests pass. MERGED into main at 18:46 by the integrator; awaiting deploy + live check before done-live. |
-| U2 | R2 — rebuild the balance day by day on the tariff, fixed charges on the month's first recharge, VAT, balance line with recharge markers | Rimjhim | `u2-tariff-engine` | todo | — |
-| U3 | R3 — run-out date, and the amount to recharge today split into energy / higher-slab / fixed / VAT | Robiul | `u3-questions` | pushed | 19:02 — `Questions.jsx` only. Verified by esbuild compile and an SSR harness against a reference engine over all 25 fixture cases (parts sum to total in every one). MERGED 19:1x; needs the real `tariff.js` before it can be checked live. |
-| U4 | R4 — compare the two recharge habits over three months on identical consumption | Dip | `u4-habit-compare` | todo | — |
+| U2 | R2 — rebuild the balance day by day on the tariff, fixed charges on the month's first recharge, VAT, balance line with recharge markers | Rimjhim | `u2-tariff-engine` | building | 18:52 — branch cut off main and pushed. Writing the fixed engine contract in `src/lib/tariff.js` and the `node --test` suite before the chart, since U3 and U4 import it. |
+| U3 | R3 — run-out date, and the amount to recharge today split into energy / higher-slab / fixed / VAT | Robiul | `u3-questions` | pushed | 19:02 — `Questions.jsx` only. Verified by esbuild compile and an SSR harness against a reference engine over all 25 fixture cases (parts sum to total in every one). MERGED into main 19:14 by the integrator; needs the real `tariff.js` before it can be checked live. |
+| U4 | R4 — compare the two recharge habits over three months on identical consumption | Dip | `u4-habit-compare` | pushed | 19:14 — `HabitCompare.jsx` only, MERGED into main 19:14. Renders R-16/R-33 wording and holds off any verdict while the engine reports `pending`. Needs the real `tariff.js` before it can be checked live. |
 
 Status values: `todo` → `building` → `pushed` → **`done-live`**. A row only earns
 `done-live` when its note names the exact live-URL check performed — e.g. "verified live:
