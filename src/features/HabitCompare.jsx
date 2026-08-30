@@ -49,6 +49,7 @@ function dayLabel(iso) {
 
 /** Plural helper so the explanation sentence reads as English, not as a template. */
 const times = (n) => (n === 1 ? 'once' : `${n} times`)
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 /**
  * Format a decimal-string amount from the fixture. A case missing a field must
@@ -126,6 +127,12 @@ export default function HabitCompare({ kase: kaseProp }) {
 
   const months = comparison.months ?? []
   const monthCount = months.length
+  // Two things the engine handles correctly but the prose used to assert away:
+  // a comparison that runs on a flat figure rather than the household's own
+  // readings, and a named month the readings do not cover at all.
+  const flatSource = Boolean(comparison.source && comparison.source !== 'readings')
+  const monthsWithReadings = new Set((kase.days ?? []).map((d) => d.date.slice(0, 7)))
+  const missingMonths = flatSource ? [] : months.filter((m) => !monthsWithReadings.has(m))
   const lowMonths = result.low?.monthsCharged ?? 0
   const monthlyMonths = result.monthly?.monthsCharged ?? 0
   const equal = result.cheaper === 'equal' || result.differencePaisa === 0
@@ -141,11 +148,25 @@ export default function HabitCompare({ kase: kaseProp }) {
           <strong className="font-medium text-ink-700 dark:text-ink-100">
             {months.map(monthLabel).join(', ')}
           </strong>{' '}
-          on the household&rsquo;s own daily readings — identical consumption, the same
-          calendar-month slab counter, both starting from{' '}
+          {flatSource ? (
+            <>
+              on a flat {comparison.daily_units} units a day — this case names a source other
+              than its own readings
+            </>
+          ) : (
+            <>on the household&rsquo;s own daily readings</>
+          )}{' '}
+          — identical consumption, the same calendar-month slab counter, both starting from{' '}
           {money(comparison.opening_balance_bdt)}. Cost is what the meter
           consumes: energy, VAT and the monthly fixed charges — not the amount deposited.
         </p>
+        {missingMonths.length > 0 && (
+          <p className="mt-2 text-sm text-ink-500">
+            {missingMonths.length === 1 ? 'One named month has' : `${missingMonths.length} named months have`}{' '}
+            no readings in this household — {missingMonths.map(monthLabel).join(', ')} —
+            so the comparison runs on the {plural(monthCount - missingMonths.length, 'month')} that do.
+          </p>
+        )}
       </header>
 
       {/* The verdict, stated before the detail so a judge reads it in one glance. */}
@@ -155,10 +176,10 @@ export default function HabitCompare({ kase: kaseProp }) {
         }`}
       >
         {equal ? (
-          <>Both habits cost exactly the same — {formatBDT(result.low.costPaisa)} over the {monthCount} months.</>
+          <>Both habits cost exactly the same — {formatBDT(result.low.costPaisa)} over the {plural(monthCount, 'month')}.</>
         ) : (
           <>
-            {winner} costs {formatBDT(difference)} less over the {monthCount} months.
+            {winner} costs {formatBDT(difference)} less over the {plural(monthCount, 'month')}.
           </>
         )}
       </p>
@@ -187,15 +208,25 @@ export default function HabitCompare({ kase: kaseProp }) {
         change the rate a unit is charged at.{' '}
         {equal ? (
           <>
-            Both habits triggered a first recharge in all {monthCount} of the {monthCount} months,
-            so both paid the {formatBDT(FIXED_PER_MONTH_PAISA)} demand charge and meter rent{' '}
-            {times(monthCount)}. The two habits cost the same, and that is the correct answer
-            here — there is no saving to be had from recharge timing.
+            {lowMonths === 0 ? (
+              <>
+                Neither habit triggered a recharge in these months, so neither paid the{' '}
+                {formatBDT(FIXED_PER_MONTH_PAISA)} demand charge and meter rent at all.
+              </>
+            ) : (
+              <>
+                Both habits triggered a first recharge in {lowMonths} of the{' '}
+                {plural(monthCount, 'month')}, so both paid the{' '}
+                {formatBDT(FIXED_PER_MONTH_PAISA)} demand charge and meter rent {times(lowMonths)}.
+              </>
+            )}{' '}
+            The two habits cost the same, and that is the correct answer here — there is no
+            saving to be had from recharge timing.
           </>
         ) : (
           <>
             The whole difference is fixed charges: recharging when low triggered a first
-            recharge in {lowMonths} of the {monthCount} months and recharging monthly in{' '}
+            recharge in {lowMonths} of the {plural(monthCount, 'month')} and recharging monthly in{' '}
             {monthlyMonths}, so they paid the {formatBDT(FIXED_PER_MONTH_PAISA)} demand charge
             and meter rent {times(lowMonths)} and {times(monthlyMonths)} respectively. That is
             the only source of the {formatBDT(difference)}.
@@ -236,7 +267,7 @@ function HabitCard({ title, rule, habit, monthCount, isCheaper }) {
         <Row label="Energy" value={formatBDT(habit?.energyPaisa ?? 0)} />
         <Row label="VAT (5% of energy)" value={formatBDT(habit?.vatPaisa ?? 0)} />
         <Row
-          label={`Fixed charges (${habit?.monthsCharged ?? 0} of ${monthCount} months)`}
+          label={`Fixed charges (${habit?.monthsCharged ?? 0} of ${plural(monthCount, 'month')})`}
           value={formatBDT(habit?.fixedPaisa ?? 0)}
         />
         <div className="flex items-baseline justify-between border-t border-ink-300/60 pt-1 font-semibold">

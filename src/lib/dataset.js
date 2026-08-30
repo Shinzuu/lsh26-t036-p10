@@ -65,7 +65,8 @@ export function parseCases(input) {
       fail(`That is not valid JSON: ${e.message}`)
     }
   }
-  if (!json || typeof json !== 'object') fail('Expected a JSON object, got ' + typeof json)
+  if (json === null) fail('That is null, not a case. Paste a case object, or a file with a "cases" list.')
+  if (!json || typeof json !== 'object') fail(`Expected a case object, got ${typeof json}.`)
 
   const fromKey = !Array.isArray(json) && Array.isArray(json.cases)
   const cases = Array.isArray(json) ? json : fromKey ? json.cases : [json]

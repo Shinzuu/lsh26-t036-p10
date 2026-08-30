@@ -441,6 +441,13 @@ Twenty-two cases come out equal. Three differ, and each differs by exactly 82.00
 because the low-balance habit recharged in only two of the three months and so paid the
 demand charge and meter rent twice instead of three times.
 
+**Correction, 19:50.** The absolute totals in the table below were computed while writing
+this spec with VAT rounded per day and summed. The engine rounds VAT once over the period
+(see `vatOn` in `src/lib/tariff.js`), so every figure here reads 1-13 paisa low against the
+app — PUB-01 is 11,815.37, not 11,815.36. The *differences* and the fixed-charge month
+counts, which are what this oracle exists to check, are unaffected and still hold exactly.
+Do not "fix" the engine to match these totals.
+
 **If U4 produces a difference that is not 0.00 or a multiple of 82.00, it is wrong.**
 That is the cheapest possible check on the most dangerous item in this problem.
 
