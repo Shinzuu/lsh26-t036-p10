@@ -109,6 +109,13 @@ first-recharge fixed charges occurred.
   priced at the lowest slab, with the higher-slab part being the real cost minus that base.
   The four parts then reconcile exactly to the total.
 
+- The interface uses the team's five brand colours, placed by measured contrast rather
+  than by eye: near-black `#343134` for body text (12.0:1 on the page), deep blue `#303c51`
+  for headings and chart marks (10.4:1), muted violet `#54517c` as the single interactive
+  colour (6.9:1), and periwinkle `#a0a4d0` and sand `#c6bc8e` only as surfaces carrying dark
+  text — at 2.4:1 and 1.9:1 they are unreadable as text on a light page. Every pair clears
+  WCAG AA in both colour schemes.
+
 ## How we approached it, and who did what
 
 The tariff is the whole problem, so it was built as a pure module with a `node --test`

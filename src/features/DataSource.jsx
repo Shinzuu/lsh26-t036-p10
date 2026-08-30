@@ -121,15 +121,26 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
               <li
                 key={m.month}
                 className={`rounded-xl border px-3 py-2 text-sm ${
-                  tags.length
-                    ? 'border-accent/50 bg-accent-soft'
-                    : 'border-ink-300/60 bg-white/60 dark:bg-ink-900/30'
+                  // Sand marks the money event, accent marks the consumption
+                  // facts — the two kinds of label are different in kind, so
+                  // they are different on screen.
+                  tags.includes('large late recharge')
+                    ? 'border-sand bg-sand-soft'
+                    : tags.length
+                      ? 'border-accent/50 bg-accent-soft'
+                      : 'border-ink-300/60 bg-white/60 dark:bg-ink-900/30'
                 }`}
               >
                 <span className="font-medium">{formatMonth(m.month)}</span>{' '}
                 <span className="text-ink-500">{m.units.toLocaleString('en-GB')} units</span>
                 {tags.length > 0 && (
-                  <span className="mt-1 block text-xs font-medium text-accent">
+                  <span
+                    className={`mt-1 block text-xs font-medium ${
+                      tags.includes('large late recharge')
+                        ? 'text-ink-900 dark:text-ink-50'
+                        : 'text-accent'
+                    }`}
+                  >
                     {tags.join(' · ')}
                   </span>
                 )}

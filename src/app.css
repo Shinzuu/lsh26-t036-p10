@@ -8,25 +8,42 @@
    the app look deliberate in under a minute, not hunt for hardcoded colours.
    --------------------------------------------------------------------------- */
 @theme {
-  --color-ink-50: oklch(0.98 0.004 260);
-  --color-ink-100: oklch(0.95 0.006 260);
-  --color-ink-300: oklch(0.79 0.012 260);
-  --color-ink-500: oklch(0.58 0.018 260);
-  --color-ink-700: oklch(0.38 0.022 260);
-  --color-ink-900: oklch(0.19 0.02 260);
+  /* -------------------------------------------------------------------------
+     Brand palette. Five colours, each placed by measured contrast rather than
+     by taste — every pair below was checked against WCAG AA before it shipped,
+     because unreadable text is a usability failure, not a style choice.
 
-  --color-accent: oklch(0.62 0.19 258);
-  --color-accent-soft: oklch(0.94 0.04 258);
+       #343134  ink        near-black, warm      body text (12.0:1 on the page)
+       #303c51  slate      deep blue             headings, chart marks (10.4:1)
+       #54517c  purple     muted violet          the one interactive colour (6.9:1)
+       #a0a4d0  periwinkle light violet          dark-mode accent, tinted surfaces
+       #c6bc8e  sand       warm khaki            highlight surfaces, never text
 
-  --color-danger: oklch(0.58 0.2 22);
-  --color-ok: oklch(0.63 0.15 155);
+     Sand and periwinkle are too light to be text on a light page (1.9:1 and
+     2.4:1) so they are only ever surfaces here, carrying dark text on top —
+     ink on sand is 6.7:1. That is the whole rule this palette needs.
+     ------------------------------------------------------------------------- */
+  --color-ink-50: #f6f6fa;
+  --color-ink-100: #eceef5;
+  --color-ink-300: #c9cad8;
+  --color-ink-500: #5b5f70;
+  --color-ink-700: #303c51;
+  --color-ink-900: #343134;
+
+  --color-accent: #54517c;
+  --color-accent-soft: #e8e9f4;
+
+  --color-sand: #c6bc8e;
+  --color-sand-soft: #f0ebdc;
+  --color-peri: #a0a4d0;
+
+  --color-danger: #a83a32;
+  --color-ok: #303c51;
 
   --font-sans: 'Inter var', 'Inter', ui-sans-serif, system-ui, sans-serif;
   --radius-card: 0.875rem;
 }
 
-/* Theme: ochre — this is an operations app: meters, balances, running costs. */
-@import './themes/ochre.css';
 
 html {
   -webkit-text-size-adjust: 100%;
@@ -40,6 +57,19 @@ body {
 
 /* Respect the OS setting rather than shipping a theme toggle nobody asked for. */
 @media (prefers-color-scheme: dark) {
+  /* The ink ramp does not invert — ink-900 is the dark page and ink-50 the
+     light text. Only the colours that would be unreadable against a dark page
+     are lifted: periwinkle becomes the accent it was chosen to be, and sand
+     carries the positive marks. Each is measured against #343134. */
+  :root {
+    --color-ink-500: #a5a2b0;   /* 5.1:1 */
+    --color-accent: #a0a4d0;    /* 5.3:1 */
+    --color-accent-soft: #3c3950;
+    --color-sand-soft: #403a2b;
+    --color-danger: #e08b82;    /* 5.0:1 */
+    --color-ok: #c6bc8e;        /* 6.7:1 */
+  }
+
   body {
     @apply bg-ink-900 text-ink-50;
   }
