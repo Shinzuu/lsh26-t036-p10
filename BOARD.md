@@ -16,7 +16,7 @@ Speed for it.
 |---|---|---|---|---|
 | U1 | 1 | — | todo | — |
 | U2 | 2 | — | todo | — |
-| U3 | 3 | — | todo | — |
+| U3 | 3 | Robiul | pushed | 19:02 — `u3-questions` pushed. `src/features/Questions.jsx` only. Run-out date + target-date input with the four parts reconciling. Verified: esbuild compile, and an SSR harness against a reference engine over all 25 public fixture cases (parts sum to total in every one). Needs U2's `src/lib/tariff.js` + the store, and wiring into `App.jsx`, before it can be checked live. |
 | U4 | 4 | — | todo | — |
 
 Status values: `todo` → `building` → `pushed` → **`done-live`**. A row only
