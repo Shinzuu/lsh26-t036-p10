@@ -153,3 +153,32 @@ test('the last seven days of a 29-day February are the 23rd to the 29th', () => 
   kase.recharges = [{ date: '2024-02-22', amount_bdt: '100.00' }]
   assert.equal(monthSummary(kase).lateLarge, null)
 })
+
+// --- bonus features, U5 -----------------------------------------------------
+
+test('a recharge outside the reading period is reported, not silently dropped', async () => {
+  const { simulate } = await import('./tariff.js')
+  const kase = clone(SEED)
+  assert.equal(simulate(kase).unappliedRecharges.length, 0)
+
+  kase.recharges.push({ date: '2025-12-25', amount_bdt: '500.00' })
+  kase.recharges.push({ date: '2026-07-15', amount_bdt: '700.00' })
+  const sim = simulate(kase)
+  assert.equal(sim.unappliedRecharges.length, 2)
+  assert.equal(sim.unappliedPaisa, 120000)
+  // and the rebuild itself is unchanged by money it could not place
+  assert.equal(sim.closingBalancePaisa, simulate(SEED).closingBalancePaisa)
+})
+
+test('a month bill sums the simulation rows it covers', async () => {
+  const { simulate, DEMAND_CHARGE_PAISA, METER_RENT_PAISA } = await import('./tariff.js')
+  const sim = simulate(SEED)
+  const june = sim.rows.filter((r) => r.date.startsWith('2026-06'))
+  const energy = june.reduce((s, r) => s + r.energyPaisa, 0)
+  const vat = june.reduce((s, r) => s + r.vatPaisa, 0)
+  const fixed = june.reduce((s, r) => s + r.fixedPaisa, 0)
+  assert.equal(energy, 385265)
+  assert.equal(vat, 19263)
+  assert.equal(fixed, DEMAND_CHARGE_PAISA + METER_RENT_PAISA)
+  assert.equal(energy + vat + fixed, 412728)
+})
