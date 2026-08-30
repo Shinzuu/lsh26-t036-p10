@@ -109,6 +109,24 @@ first-recharge fixed charges occurred.
   priced at the lowest slab, with the higher-slab part being the real cost minus that base.
   The four parts then reconcile exactly to the total.
 
+## How we approached it, and who did what
+
+The tariff is the whole problem, so it was built as a pure module with a `node --test`
+suite written before any interface, in integer paisa end to end, and the screen reads from
+it. The organizers' published fixture shape was adopted directly as the data model rather
+than designing a schema and mapping onto it, so an unpublished case in the same shape loads
+with no translation layer. Each required item was owned by one person on their own branch
+and their own files. After the four merged, each of us tested an item somebody else built —
+nobody tested their own work — against an independently written reference rather than
+against our own code, and every finding was fixed and re-verified on the deployed URL.
+
+| Member | GitHub | Major contribution |
+|---|---|---|
+| MD. Nishadul Islam Chy Shezan | `Shinzuu` | Build specification and the reference answers for item 4; required item 1 — the seeded household, the case parser and validator, and the computed month labels; the application shell, the store, every merge and every deployment |
+| Rimjhim Dey | `RimjhimD` | Required item 2 — the tariff engine (slab pricing on the calendar-month counter, the month reset, once-a-month fixed charges, VAT) with 37 tests written before the interface, and the balance line with a marker at every recharge; tested item 3 |
+| Robiul Hassan | `MDRobiulhassan` | Required item 3 — the run-out date with its assumption stated, and the target-date recharge broken into energy, higher slab, fixed charges and VAT with the four parts reconciling; tested item 4 and the whole-app pass |
+| Dip Jyoti Ghosh | `Dip-it11` | Required item 4 — the habit comparison over identical consumption per R-16 and R-33, with the cheaper habit named and the fixed-charge explanation in words; tested item 1 |
+
 ## Known limitations
 
 *(Filled at the freeze.)*
