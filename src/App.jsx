@@ -7,10 +7,12 @@
  * statement finds each without being told where to look, and a family reading
  * it gets the answer before the working.
  */
+import { useState } from 'react'
 import { StoreProvider, useCase } from './lib/store.js'
 import { SEED } from './lib/dataset.js'
 import CasePicker from './features/CasePicker.jsx'
 import Hero from './features/Hero.jsx'
+import MeterSetup from './features/MeterSetup.jsx'
 import DataSource from './features/DataSource.jsx'
 import BalanceChart from './features/BalanceChart.jsx'
 import Questions from './features/Questions.jsx'
@@ -25,6 +27,7 @@ const SECTIONS = [
 
 function Layout() {
   const { kase, load, error, setError } = useCase()
+  const [setup, setSetup] = useState(false)
   const empty = !kase || !kase.days?.length
 
   return (
@@ -37,8 +40,15 @@ function Layout() {
             </p>
             <p className="truncate text-xs text-ink-500">Prepaid meter · slab-aware</p>
           </div>
+          <button
+            type="button"
+            onClick={() => setSetup((v) => !v)}
+            className="shrink-0 rounded-xl border border-accent/50 bg-accent-soft px-3 py-2 text-sm font-medium text-accent"
+          >
+            {setup ? 'Close' : 'Set up my meter'}
+          </button>
           {kase && (
-            <div className="w-40 shrink-0 sm:w-56">
+            <div className="hidden w-40 shrink-0 sm:block sm:w-56">
               <CasePicker
                 current={kase.case_id}
                 onLoad={load}
@@ -83,6 +93,16 @@ function Layout() {
           </div>
         ) : (
           <>
+            {setup && (
+              <MeterSetup
+                onCancel={() => setSetup(false)}
+                onLoad={(k) => {
+                  load(k)
+                  setSetup(false)
+                }}
+              />
+            )}
+
             <div className="space-y-4">
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
