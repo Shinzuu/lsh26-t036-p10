@@ -12,6 +12,7 @@
  * the screen looks the same.
  */
 import { useState } from 'react'
+import { FileUp, ClipboardPaste } from 'lucide-react'
 import { SEED, parseCases, monthSummary, dateRange } from '../lib/dataset.js'
 
 const MONTH_LABEL = { month: 'short', year: 'numeric', timeZone: 'UTC' }
@@ -194,10 +195,14 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
                 onClick={() => loadText(paste)}
                 disabled={busy || !paste.trim()}
               >
+                <ClipboardPaste className="mr-1.5 inline size-4 align-[-3px]" aria-hidden="true" />
                 {busy ? 'Loading…' : 'Load pasted case'}
               </button>
               <label className="text-sm">
-                <span className="mr-2 text-ink-500">or a JSON file</span>
+                <span className="mr-2 inline-flex items-center gap-1.5 text-ink-500">
+                  <FileUp className="size-4" aria-hidden="true" />
+                  or a JSON file
+                </span>
                 <input
                   type="file"
                   accept="application/json,.json"

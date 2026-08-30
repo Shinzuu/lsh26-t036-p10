@@ -18,8 +18,9 @@
     "wrangler": "^4.123.0"
   },
   "dependencies": {
+    "@number-flow/react": "^0.6.2",
+    "lucide-react": "^1.37.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "@supabase/supabase-js": "^2.112.3"
+    "react-dom": "^19.2.8"
   }
 }

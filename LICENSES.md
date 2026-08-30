@@ -9,9 +9,13 @@ LGPL, AGPL, MPL, SSPL, or non-commercial.
 |---|---|---|
 | react | ^19.2.8 | MIT |
 | react-dom | ^19.2.8 | MIT |
+| @number-flow/react | ^0.6.2 | MIT |
+| lucide-react | ^1.37.0 | ISC |
 
-`@supabase/supabase-js` (MIT) is declared in `package.json` and carried over from our
-starter kit. This project has no backend and never imports it, so it is not in the bundle.
+`@supabase/supabase-js` came with our starter kit and was removed once the storage adapter
+was deleted: this project has no backend and imports nothing from it. `motion` was trialled
+for card transitions and removed — it cost 40 kB gzipped for a fade, which is a bad trade
+for a judge opening the page on mobile data.
 
 ## Build and development dependencies — not shipped
 

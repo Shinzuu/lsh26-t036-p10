@@ -16,6 +16,7 @@
  * Owned by U3. Imports the engine and the store, never edits them.
  */
 import { useMemo, useState } from 'react'
+import NumberFlow from '@number-flow/react'
 import { useCase } from '../lib/store.js'
 import { formatBDT, projectRunOut, requiredRecharge } from '../lib/tariff.js'
 
@@ -176,6 +177,7 @@ export default function Questions() {
           1 · When does the balance run out?
         </h3>
 
+        <div aria-live="polite">
         {runOut?.error ? (
           <p className="mt-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
             {runOut.error}
@@ -195,6 +197,8 @@ export default function Questions() {
             Not within the projected period
           </p>
         )}
+
+        </div>
 
         <p className="mt-3 text-xs text-ink-500">
           Assumes {kase.usual_daily_units} units a day — the household's usual daily use — from a
@@ -223,14 +227,20 @@ export default function Questions() {
           onChange={(e) => setTargetDate(e.target.value)}
         />
 
+        <div aria-live="polite">
         {needed?.error ? (
           <p className="mt-3 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
             {needed.error}
           </p>
         ) : parts ? (
           <>
-            <p className="mt-4 text-3xl font-semibold tracking-tight">
-              {formatBDT(parts.netRequiredPaisa)}
+            <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums">
+              <NumberFlow
+                value={parts.netRequiredPaisa / 100}
+                format={{ style: 'currency', currency: 'BDT', currencyDisplay: 'narrowSymbol' }}
+                locale="en-GB"
+                aria-hidden="false"
+              />
             </p>
             <p className="mt-1 text-sm text-ink-500">
               to cover {plural(parts.days, 'day')} at {kase.usual_daily_units} units a day, through{' '}
@@ -294,6 +304,8 @@ export default function Questions() {
             Pick a date to see what today's recharge needs to be.
           </p>
         )}
+
+        </div>
 
         {parts && (
           <p className="mt-4 border-t border-ink-300/40 pt-3 text-xs text-ink-500">

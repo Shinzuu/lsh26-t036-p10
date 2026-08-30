@@ -8,6 +8,7 @@
  */
 import { StoreProvider, useCase } from './lib/store.js'
 import DataSource from './features/DataSource.jsx'
+import { SEED } from './lib/dataset.js'
 import BalanceChart from './features/BalanceChart.jsx'
 import Questions from './features/Questions.jsx'
 import HabitCompare from './features/HabitCompare.jsx'
@@ -34,9 +35,23 @@ function Layout() {
         <DataSource kase={kase} error={error} onLoad={load} />
 
         {empty ? (
-          <p className="rounded-card border border-ink-300 p-6 text-center text-ink-500">
-            No readings loaded. Paste or upload a case above to begin.
-          </p>
+          // An empty screen is an invitation, not a status line: the action that
+          // fills it sits inside the message.
+          <div className="rounded-card border border-dashed border-ink-300 p-8 text-center">
+            <p className="font-medium">Nothing to rebuild yet.</p>
+            <p className="mx-auto mt-1 max-w-md text-sm text-ink-500">
+              Load a household&rsquo;s daily readings and recharges and this page will rebuild
+              its meter balance day by day, say when the balance runs out, and compare two
+              recharge habits.
+            </p>
+            <button
+              type="button"
+              className="mt-4 rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white"
+              onClick={() => load(SEED)}
+            >
+              Load the sample household
+            </button>
+          </div>
         ) : (
           <>
             {/* Item 2 — the balance rebuilt day by day, with every recharge marked. */}

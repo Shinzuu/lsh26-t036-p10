@@ -17,6 +17,7 @@
  * plainly when they do rather than manufacturing a difference.
  */
 import { useMemo } from 'react'
+import NumberFlow from '@number-flow/react'
 import {
   compareHabits,
   formatBDT,
@@ -142,7 +143,6 @@ export default function HabitCompare({ kase: kaseProp }) {
   return (
     <Frame>
       <header>
-        <h2 className="text-xl font-semibold tracking-tight">Which recharge habit costs less?</h2>
         <p className="mt-1 text-sm text-ink-500">
           Both habits run over{' '}
           <strong className="font-medium text-ink-700 dark:text-ink-100">
@@ -241,8 +241,8 @@ export default function HabitCompare({ kase: kaseProp }) {
 function Frame({ children }) {
   return (
     <section aria-labelledby="habit-compare-heading" className="w-full">
-      <h2 id="habit-compare-heading" className="sr-only">
-        Recharge habit comparison
+      <h2 id="habit-compare-heading" className="text-xl font-semibold tracking-tight">
+        Which recharge habit costs less?
       </h2>
       {children}
     </section>
@@ -272,7 +272,13 @@ function HabitCard({ title, rule, habit, monthCount, isCheaper }) {
         />
         <div className="flex items-baseline justify-between border-t border-ink-300/60 pt-1 font-semibold">
           <dt>Total cost</dt>
-          <dd className="tabular-nums">{formatBDT(habit?.costPaisa ?? 0)}</dd>
+          <dd className="tabular-nums">
+            <NumberFlow
+              value={(habit?.costPaisa ?? 0) / 100}
+              format={{ style: 'currency', currency: 'BDT', currencyDisplay: 'narrowSymbol' }}
+              locale="en-GB"
+            />
+          </dd>
         </div>
       </dl>
 
