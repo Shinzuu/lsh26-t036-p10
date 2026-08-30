@@ -149,6 +149,30 @@ body {
   .bg-sand-soft.text-ink-900 {
     color: var(--color-ink-50);
   }
+
+  /* ---------------------------------------------------------------------------
+     The same trap, on the other side of the palette.
+
+     `--color-accent` lifts for dark mode (#54517c -> #a0a4d0) so it stays legible
+     as TEXT on the dark page. That makes it a light surface — and every primary
+     button in the app is `bg-accent text-white`, which on #a0a4d0 is 2.41:1.
+     Six call sites across four owners' files: the two primary buttons in App.jsx,
+     the Next control, the load button in DataSource, the submit in MeterSetup,
+     and the active step badge in Sidebar.
+
+     Darkening the token instead is not available — it is the same token that has
+     to stay light to work as text. So the button flips its label to ink instead:
+     #343134 on #a0a4d0 is 5.33:1. The `/80` child covers the "Next" caption
+     inside the step footer's button, which sets its own colour and would
+     otherwise stay white.
+     --------------------------------------------------------------------------- */
+  .bg-accent.text-white {
+    color: var(--color-ink-900);
+  }
+
+  .bg-accent .text-white\/80 {
+    color: color-mix(in oklab, var(--color-ink-900) 80%, transparent);
+  }
 }
 
 /* -----------------------------------------------------------------------------

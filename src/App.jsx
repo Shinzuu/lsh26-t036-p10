@@ -60,8 +60,14 @@ function DisplayControls() {
   return (
     <div className="flex items-center gap-2">
       <label className="relative flex items-center gap-2">
+        {/* The visible word is `hidden` below lg, and display:none content is
+            excluded from the accessibility tree — so under 1024px this was a
+            combobox a screen reader announced with no name at all. The explicit
+            aria-label carries the name at every width; the span stays for the
+            sighted label on wide screens. */}
         <span className="hidden shrink-0 text-xs text-ink-300 lg:block">Currency</span>
         <select
+          aria-label="Currency"
           value={currency.code}
           onChange={(e) => setCurrency(e.target.value)}
           className="appearance-none rounded-xl border border-white/25 bg-transparent py-2 pl-2.5 pr-7 text-sm text-ink-50 focus:border-sand"
@@ -235,11 +241,19 @@ function Layout() {
     const fromHash = window.location.hash.replace('#', '')
     return STEPS.some((s) => s.id === fromHash) ? fromHash : 'overview'
   })
+  // The phone's step list is a disclosure, not a permanent block. Closing it on
+  // every move means a step change never leaves the menu sitting open over the
+  // content it just navigated to.
+  const [stepMenu, setStepMenu] = useState(false)
   const setStep = (id) => {
     setStepState(id)
+    setStepMenu(false)
     window.history.replaceState(null, '', `#${id}`)
     window.scrollTo({ top: 0, behavior: 'auto' })
   }
+  const stepIndex = STEPS.findIndex((s) => s.id === step)
+  const stepPosition = stepIndex < 0 ? 1 : stepIndex + 1
+  const currentStep = STEPS[stepIndex] ?? STEPS[0]
   useEffect(() => {
     const onHash = () => {
       const id = window.location.hash.replace('#', '')
@@ -273,7 +287,6 @@ function Layout() {
                 : 'Your household · remembered on this device'}
             </p>
           </div>
-          <DisplayControls />
           {/* Was `hidden sm:block`. Every case now goes through `load()`, which
               writes to localStorage, so a reload no longer returns to the sample
               — this button is the only way back. Hiding it below `sm` left a
@@ -299,13 +312,21 @@ function Layout() {
               phone could not load PUB-02 to see the habits differ. One instance
               still: it drops to its own full-width row below `sm` and sits inline
               from `sm` up, so there is no duplicate control to tab through. */}
+          {/* The two "what am I looking at, and how is it shown" controls sit
+              together on their own row, rather than the currency select wedging
+              itself between the brand and the buttons. The top row is then the
+              name of the thing and the two actions, which is what a first glance
+              should have to take in. */}
           {kase && (
-            <div className="order-last w-full shrink-0 sm:order-none sm:w-56">
-              <CasePicker
-                current={kase.case_id}
-                onLoad={load}
-                onError={(m) => setError?.(m)}
-              />
+            <div className="order-last flex w-full shrink-0 items-center gap-2 sm:order-none sm:w-auto">
+              <div className="min-w-0 flex-1 sm:w-56 sm:flex-none">
+                <CasePicker
+                  current={kase.case_id}
+                  onLoad={load}
+                  onError={(m) => setError?.(m)}
+                />
+              </div>
+              <DisplayControls />
             </div>
           )}
         </div>
@@ -363,9 +384,46 @@ function Layout() {
                 </p>
               )}
 
-              {/* The step list on a phone: the same map, above the content. */}
+              {/* The step list on a phone.
+                  It used to render all seven rows above the content on every
+                  step — roughly 300px of navigation before the first figure, on
+                  a screen with about 600px to spend, repeated on every step. The
+                  reader already knows where they are; what they need is a way
+                  out, and `StepFooter` gives them Back and Next at the bottom.
+                  So this collapses to one row that names the current step and
+                  opens the full list on demand. */}
               <div className="lg:hidden">
-                <Sidebar active={step} onSelect={setStep} className="rounded-card border border-ink-300/60 bg-white p-3 dark:bg-ink-900/40" />
+                <button
+                  type="button"
+                  aria-expanded={stepMenu}
+                  aria-controls="step-menu"
+                  onClick={() => setStepMenu((v) => !v)}
+                  className="flex min-h-11 w-full items-center justify-between gap-3 rounded-card border border-ink-300/60 bg-white px-4 py-2 text-left dark:bg-ink-900/40"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-xs text-ink-500">
+                      Step {stepPosition} of {STEPS.length}
+                    </span>
+                    <span className="block truncate text-sm font-medium">{currentStep?.label}</span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2 text-xs text-ink-500">
+                    {stepMenu ? 'Close' : 'All steps'}
+                    <ChevronDown
+                      className={`size-4 transition-transform ${stepMenu ? 'rotate-180' : ''}`}
+                      aria-hidden="true"
+                    />
+                  </span>
+                </button>
+                {stepMenu && (
+                  <Sidebar
+                    id="step-menu"
+                    active={step}
+                    onSelect={setStep}
+                    onNavigate={() => setStepMenu(false)}
+                    showProgress={false}
+                    className="mt-2 rounded-card border border-ink-300/60 bg-white p-3 dark:bg-ink-900/40"
+                  />
+                )}
               </div>
 
               <StepHeader step={step} />
