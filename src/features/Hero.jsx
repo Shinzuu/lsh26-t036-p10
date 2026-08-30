@@ -4,129 +4,135 @@
  * A family opening this does not want a dashboard; they want three numbers —
  * what is left, when it runs out, and what to put in. Those sit at the top,
  * large, and everything below them is the working that justifies them.
+ *
+ * Each figure is a link into the step that shows its working. The step lives in
+ * the address hash and the shell listens for `hashchange`, so a plain anchor is
+ * the whole navigation — no prop, no callback, and it works with a keyboard and
+ * with the browser's Back button for free.
  */
-import { CalendarClock, Wallet, Zap } from 'lucide-react'
+import { ArrowRight, CalendarClock, Wallet, Zap } from 'lucide-react'
 import { useMemo } from 'react'
 import { useDisplay, Money } from '../lib/display.jsx'
 import { useCase } from '../lib/store.js'
-import { projectRunOut, requiredRecharge } from '../lib/tariff.js'
+import { useReveal } from '../lib/useReveal.js'
+import { projectRunOut, requiredRecharge, toPaisa } from '../lib/tariff.js'
+import { longDate, nextDay, plural, daysBetween } from '../lib/format.js'
 
-const nextDay = (iso) => {
-  const d = new Date(`${iso}T00:00:00Z`)
-  d.setUTCDate(d.getUTCDate() + 1)
-  return d.toISOString().slice(0, 10)
-}
-
-const longDate = (iso) =>
-  iso
-    ? new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-        timeZone: 'UTC',
-      })
-    : '—'
-
-function Figure({ icon: Icon, label, children, hint, tone = 'default' }) {
+/** One headline figure, as a card that goes somewhere. */
+function Figure({ href, icon: Icon, label, children, hint, tone = 'default', big = false }) {
+  const accent = tone === 'accent'
   return (
-    <div
-      className={`min-w-0 rounded-card border p-4 ${
-        tone === 'accent'
-          ? 'border-accent/40 bg-accent-soft'
-          : 'border-ink-300/60 bg-white dark:bg-ink-900/40'
-      }`}
+    <a
+      href={href}
+      className={`lift group flex min-w-0 flex-col justify-between rounded-card border p-4 no-underline ${
+        accent
+          ? 'border-accent/40 bg-accent-soft text-ink-900 dark:text-ink-50'
+          : 'border-ink-300/60 bg-white text-ink-900 dark:bg-ink-900/40 dark:text-ink-50'
+      } ${big ? 'sm:p-6' : ''}`}
     >
-      <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-ink-500">
-        <Icon className="size-3.5" aria-hidden="true" />
-        {label}
+      <p className="flex items-center justify-between gap-2 text-xs font-medium uppercase tracking-[0.14em] text-ink-500">
+        <span className="flex items-center gap-1.5">
+          <Icon className="size-3.5" aria-hidden="true" />
+          {label}
+        </span>
+        <ArrowRight
+          className="size-3.5 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:text-accent"
+          aria-hidden="true"
+        />
       </p>
-      <p className="font-meter mt-1 text-2xl font-semibold sm:text-3xl">
+      <p className={`font-meter mt-2 font-semibold ${big ? 'text-5xl sm:text-6xl' : 'text-2xl sm:text-3xl'}`}>
         {children}
       </p>
-      {hint && <p className="mt-1 text-xs text-ink-500">{hint}</p>}
-    </div>
+      {hint && <p className="mt-2 text-xs text-ink-500">{hint}</p>}
+    </a>
   )
 }
 
 export default function Hero() {
-  const { money, currency, numberLocale, number } = useDisplay()
+  const { money, number } = useDisplay()
   const { kase, sim } = useCase()
-  const last = sim?.rows?.at(-1)
-  if (!kase || !last) return null
+  const { ref, shown } = useReveal()
+  const last = sim?.rows?.at(-1) ?? null
 
-  const from = nextDay(kase.today)
-  const sameMonth = from.slice(0, 7) === kase.today.slice(0, 7)
-  const start = useMemo(() => ({
-    fromDate: from,
-    fromBalancePaisa: last.balancePaisa,
-    monthUnitsBefore: sameMonth ? last.monthUnitsBefore + last.units : 0,
-    dailyUnits: kase.usual_daily_units,
-  }), [from, last, sameMonth, kase.usual_daily_units])
+  // Hooks first, every render, whether or not there is a case — an early
+  // return above a hook changes the hook count between renders.
+  const start = useMemo(() => {
+    if (!kase || !last) return null
+    const from = nextDay(kase.today)
+    const sameMonth = from.slice(0, 7) === kase.today.slice(0, 7)
+    return {
+      fromDate: from,
+      fromBalancePaisa: last.balancePaisa,
+      monthUnitsBefore: sameMonth ? last.monthUnitsBefore + last.units : 0,
+      dailyUnits: kase.usual_daily_units,
+    }
+  }, [kase, last])
 
-  // Both walk forward a day at a time, so they are tied to the case rather than
-  // recomputed whenever a display preference changes.
-  const runOut = useMemo(() => projectRunOut(start), [start])
+  const runOut = useMemo(() => (start ? projectRunOut(start) : null), [start])
   const needed = useMemo(
-    () => requiredRecharge({ ...start, targetDate: kase.target_date }),
-    [start, kase.target_date],
+    () => (start ? requiredRecharge({ ...start, targetDate: kase.target_date }) : null),
+    [start, kase],
   )
 
+  if (!kase || !last || !start) return null
+
+  const lastRecharge = kase.recharges?.at(-1)
+  const daysLeft = runOut?.runsOutOn ? daysBetween(start.fromDate, runOut.runsOutOn) + 1 : null
+  const low = daysLeft !== null && daysLeft <= 7
+
   return (
-    <section aria-label="Where this household stands" className="grid gap-4 lg:grid-cols-5">
+    <section
+      ref={ref}
+      aria-label="Where this household stands"
+      className={`grid gap-4 lg:grid-cols-5 reveal ${shown ? 'reveal-in' : ''}`}
+    >
       {/* The meter reading itself, given the weight a meter has in the room. */}
-      <div className="lg:col-span-3 rounded-card border border-ink-300/60 bg-white p-6 dark:bg-ink-900/40">
-        <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.14em] text-ink-500">
-          <Wallet className="size-3.5" aria-hidden="true" />
-          On the meter
-        </p>
-        <p className="font-meter mt-2 text-5xl font-semibold sm:text-6xl">
+      <div className="lg:col-span-3">
+        <Figure
+          href="#balance"
+          icon={Wallet}
+          label="On the meter"
+          big
+          hint={
+            <>
+              as of {longDate(kase.today)} · using {number(kase.usual_daily_units)} units a day
+              {lastRecharge && (
+                <>
+                  {' '}· last recharge {money(toPaisa(lastRecharge.amount_bdt))} on{' '}
+                  {longDate(lastRecharge.date)}
+                </>
+              )}
+            </>
+          }
+        >
           <Money paisa={last.balancePaisa} />
-        </p>
-        <p className="mt-2 text-sm text-ink-500">
-          after {number(kase.days.length)} days of readings, on {longDate(kase.today)}
-        </p>
-
-        <div className="rule my-4" />
-
-        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 text-sm">
-          <span className="text-ink-500">
-            Using{' '}
-            <strong className="font-medium text-ink-900 dark:text-ink-50">
-              {number(kase.usual_daily_units)} units
-            </strong>{' '}
-            a day
-          </span>
-          <span className="text-ink-500">
-            Last recharge{' '}
-            <strong className="font-medium text-ink-900 dark:text-ink-50">
-              {kase.recharges.length ? money(Math.round(parseFloat(kase.recharges.at(-1).amount_bdt) * 100)) : 'none'}
-            </strong>
-            {kase.recharges.length ? ` on ${longDate(kase.recharges.at(-1).date)}` : ''}
-          </span>
-        </div>
+        </Figure>
       </div>
 
-      {/* The two things to act on, stacked beside it. */}
-      <div className="lg:col-span-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+      {/* The two things to act on, beside it. */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2 lg:grid-cols-1">
         <Figure
+          href="#questions"
           icon={CalendarClock}
           label="Runs out"
+          tone={low ? 'accent' : 'default'}
           hint={
-            runOut.runsOutOn
-              ? `at ${number(kase.usual_daily_units)} units a day, with no further recharge`
+            runOut?.runsOutOn
+              ? `in ${plural(daysLeft, 'day', number)} at the usual daily use, with no recharge`
               : 'not within the projected period'
           }
         >
-          {runOut.runsOutOn ? longDate(runOut.runsOutOn) : '—'}
+          {runOut?.runsOutOn ? longDate(runOut.runsOutOn) : '—'}
         </Figure>
 
         <Figure
+          href="#questions"
           icon={Zap}
           label="Recharge today"
           tone="accent"
-          hint={`to last until ${longDate(kase.target_date)} — ${money(needed.totalPaisa)} of charges, less what is on the meter`}
+          hint={`to last until ${longDate(kase.target_date)}`}
         >
-          <Money paisa={needed.netRequiredPaisa} />
+          <Money paisa={needed?.netRequiredPaisa ?? 0} />
         </Figure>
       </div>
     </section>

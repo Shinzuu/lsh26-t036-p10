@@ -1,5 +1,5 @@
 /**
- * U3 — required item 3: the family's two questions.
+ * Required item 3 — the family's two questions.
  *
  *   1. Given today's balance and their usual daily use, on which date does the
  *      balance run out?
@@ -13,45 +13,28 @@
  * `monthUnitsBefore` is the month's running total through `today` when the next
  * day is still in that month, and zero when it is not.
  *
- * Owned by U3. Imports the engine and the store, never edits them.
+ * Each fact is stated once. The answer leads; the one assumption it rests on
+ * sits under it in a line; the definition the problem leaves open — what "the
+ * part caused by being in a higher slab" is measured against — is the single
+ * collapsed note, because the spec requires it on screen and nothing else here
+ * needs a paragraph.
  */
 import { useMemo, useState } from 'react'
+import { Check } from 'lucide-react'
 import { useDisplay, Money } from '../lib/display.jsx'
 import { useCase } from '../lib/store.js'
+import { useReveal } from '../lib/useReveal.js'
+import {
+  projectRunOut,
+  requiredRecharge,
+  BASE_PAISA_PER_UNIT,
+  DEMAND_CHARGE_PAISA,
+  METER_RENT_PAISA,
+  VAT_PERCENT,
+} from '../lib/tariff.js'
+import { addDays, daysBetween, endOfMonth, longDate, nextDay, plural } from '../lib/format.js'
+import Tooltip from './ui/Tooltip.jsx'
 import Explainer from './Explainer.jsx'
-import { projectRunOut, requiredRecharge } from '../lib/tariff.js'
-
-/** Lowest slab rate, in paisa — the baseline the "higher slab" part is measured against. */
-const BASE_RATE_PAISA = 463
-
-/** "2026-06-30" -> "2026-07-01", without going through a timezone. */
-function nextDay(iso) {
-  const d = new Date(`${iso}T00:00:00Z`)
-  d.setUTCDate(d.getUTCDate() + 1)
-  return d.toISOString().slice(0, 10)
-}
-
-/** "2026-08-13" -> "13 August 2026". Plain and unambiguous for a judge. */
-function longDate(iso) {
-  if (!iso) return '—'
-  const d = new Date(`${iso}T00:00:00Z`)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  })
-}
-
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
-
-/** Days between two ISO dates, inclusive of neither end. */
-function daysBetween(fromIso, toIso) {
-  const a = new Date(`${fromIso}T00:00:00Z`).getTime()
-  const b = new Date(`${toIso}T00:00:00Z`).getTime()
-  return Math.round((b - a) / 86400000)
-}
 
 /**
  * Where the forward projection starts: the first unconsumed day, the balance at
@@ -61,10 +44,8 @@ function projectionStart(kase, sim) {
   const rows = sim?.rows ?? []
   const last = rows[rows.length - 1]
   if (!last) return null
-
   const fromDate = nextDay(kase.today)
   const sameMonth = fromDate.slice(0, 7) === kase.today.slice(0, 7)
-
   return {
     fromDate,
     fromBalancePaisa: last.balancePaisa,
@@ -73,8 +54,27 @@ function projectionStart(kase, sim) {
   }
 }
 
-function Row({ label, hint, paisa, strong = false }) {
-  const { money, currency, numberLocale, number } = useDisplay()
+/** Quick targets. Changing the date is the interaction the item is judged on. */
+function presets(fromDate, caseTarget) {
+  const list = [
+    { key: 'case', label: 'Case target', date: caseTarget },
+    { key: 'eom', label: 'End of month', date: endOfMonth(fromDate) },
+    { key: '30', label: '+30 days', date: addDays(fromDate, 29) },
+    { key: '60', label: '+60 days', date: addDays(fromDate, 59) },
+    { key: '90', label: '+90 days', date: addDays(fromDate, 89) },
+  ]
+  // Drop any preset that lands before the projection can start, and any
+  // duplicate date, so two chips never mean the same thing.
+  const seen = new Set()
+  return list.filter((p) => {
+    if (!p.date || daysBetween(fromDate, p.date) < 0 || seen.has(p.date)) return false
+    seen.add(p.date)
+    return true
+  })
+}
+
+function Row({ label, hint, paisa, strong = false, check = null }) {
+  const { money } = useDisplay()
   return (
     <div
       className={`flex items-baseline justify-between gap-4 py-2 ${
@@ -83,16 +83,32 @@ function Row({ label, hint, paisa, strong = false }) {
     >
       <span className="min-w-0">
         <span className={strong ? '' : 'text-ink-700 dark:text-ink-300'}>{label}</span>
-        {hint && <span className="mt-0.5 block text-xs text-ink-500">{hint}</span>}
+        {hint && <span className="mt-0.5 block text-xs font-normal text-ink-500">{hint}</span>}
       </span>
-      <span className="shrink-0 tabular-nums">{money(paisa)}</span>
+      <span className="flex shrink-0 items-center gap-2 tabular-nums">
+        {check === true && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-ok/10 px-2 py-0.5 text-[11px] font-medium text-ok">
+            <Check className="size-3" aria-hidden="true" />
+            adds up
+          </span>
+        )}
+        {check === false && (
+          <span className="rounded-full bg-danger/10 px-2 py-0.5 text-[11px] font-medium text-danger">
+            does not add up
+          </span>
+        )}
+        {money(paisa)}
+      </span>
     </div>
   )
 }
 
+const dotted = 'underline decoration-dotted decoration-ink-300 underline-offset-2'
+
 export default function Questions() {
-  const { money, currency, numberLocale, number } = useDisplay()
+  const { money, number } = useDisplay()
   const { kase, sim } = useCase()
+  const { ref, shown } = useReveal()
   const [targetDate, setTargetDate] = useState(null)
   // A date typed for one household is meaningless for the next, so loading a
   // different case drops it and the field falls back to that case's own target.
@@ -103,20 +119,12 @@ export default function Questions() {
   }
 
   const start = useMemo(() => (kase && sim ? projectionStart(kase, sim) : null), [kase, sim])
-
-  // The input is uncontrolled until the case lands, then defaults to the case's
-  // own target_date. Loading a different case moves the default with it.
   const target = targetDate ?? kase?.target_date ?? ''
 
   const runOut = useMemo(() => {
     if (!start) return null
     try {
-      return projectRunOut({
-        fromDate: start.fromDate,
-        fromBalancePaisa: start.fromBalancePaisa,
-        dailyUnits: kase.usual_daily_units,
-        monthUnitsBefore: start.monthUnitsBefore,
-      })
+      return projectRunOut({ ...start, dailyUnits: kase.usual_daily_units })
     } catch (err) {
       return { error: err?.message ?? String(err) }
     }
@@ -128,38 +136,35 @@ export default function Questions() {
       return { error: `Pick a date on or after ${longDate(start.fromDate)}.` }
     }
     try {
-      return requiredRecharge({
-        fromDate: start.fromDate,
-        fromBalancePaisa: start.fromBalancePaisa,
-        dailyUnits: kase.usual_daily_units,
-        monthUnitsBefore: start.monthUnitsBefore,
-        targetDate: target,
-      })
+      return requiredRecharge({ ...start, dailyUnits: kase.usual_daily_units, targetDate: target })
     } catch (err) {
       return { error: err?.message ?? String(err) }
     }
   }, [start, target, kase])
 
+  const chips = useMemo(
+    () => (start && kase ? presets(start.fromDate, kase.target_date) : []),
+    [start, kase],
+  )
+
   if (!kase || !sim) {
     return (
-      <section className="w-full" aria-busy="true">
-        <h2 className="text-lg font-semibold">The family's two questions</h2>
+      <Frame aria-busy="true">
         <div className="mt-4 space-y-2">
-          <div className="h-20 animate-pulse rounded-card bg-ink-100 dark:bg-ink-700/30" />
-          <div className="h-32 animate-pulse rounded-card bg-ink-100 dark:bg-ink-700/30" />
+          <div className="h-20 animate-pulse rounded-xl bg-ink-100 dark:bg-ink-700/30" />
+          <div className="h-32 animate-pulse rounded-xl bg-ink-100 dark:bg-ink-700/30" />
         </div>
-      </section>
+      </Frame>
     )
   }
 
   if (!start) {
     return (
-      <section className="w-full">
-        <h2 className="text-lg font-semibold">The family's two questions</h2>
-        <p className="mt-3 rounded-card border border-dashed border-ink-300/70 px-6 py-8 text-center text-ink-500">
+      <Frame>
+        <p className="mt-3 rounded-xl border border-dashed border-ink-300/70 px-6 py-8 text-center text-ink-500">
           No daily readings in this household yet, so there is no balance to project from.
         </p>
-      </section>
+      </Frame>
     )
   }
 
@@ -167,53 +172,41 @@ export default function Questions() {
   const sumPaisa = parts
     ? parts.energyPaisa + parts.higherSlabPaisa + parts.fixedPaisa + parts.vatPaisa
     : 0
-  const reconciles = parts ? sumPaisa === parts.totalPaisa : false
-  const days = target ? daysBetween(start.fromDate, target) + 1 : 0
+  const reconciles = parts ? sumPaisa === parts.totalPaisa : null
+  const daysLeft = runOut?.runsOutOn ? daysBetween(start.fromDate, runOut.runsOutOn) + 1 : null
 
   return (
-    <section className="w-full rounded-card border border-ink-300/60 bg-white p-5 shadow-sm dark:bg-ink-900/40">
-      <h2 className="text-lg font-semibold">The family's two questions</h2>
-
+    <Frame reveal={{ ref, shown }}>
       {/* ---------------- Question one: when does the balance run out? -------- */}
-      <article className="border-t border-ink-300/50 pt-5 first:border-0 first:pt-0">
+      <article className="mt-4">
         <h3 className="text-sm font-medium text-ink-700 dark:text-ink-300">
           1 · When does the balance run out?
         </h3>
 
         <div aria-live="polite">
-        {runOut?.error ? (
-          <p className="mt-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
-            {runOut.error}
-          </p>
-        ) : runOut?.runsOutOn ? (
-          <>
-            <p className="mt-2 text-2xl font-semibold tracking-tight">
-              {longDate(runOut.runsOutOn)}
+          {runOut?.error ? (
+            <p className="mt-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{runOut.error}</p>
+          ) : runOut?.runsOutOn ? (
+            <p className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-2xl font-semibold tracking-tight">{longDate(runOut.runsOutOn)}</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                  daysLeft <= 7 ? 'bg-danger/10 text-danger' : 'bg-accent-soft text-accent'
+                }`}
+              >
+                {plural(daysLeft, 'day', number)} away
+              </span>
             </p>
-            <p className="mt-1 text-sm text-ink-500">
-              {plural(daysBetween(start.fromDate, runOut.runsOutOn) + 1, 'day')} from{' '}
-              {longDate(start.fromDate)}.
-            </p>
-          </>
-        ) : (
-          <p className="mt-2 text-2xl font-semibold tracking-tight">
-            Not within the projected period
-          </p>
-        )}
-
+          ) : (
+            <p className="mt-2 text-2xl font-semibold tracking-tight">Not within the projected period</p>
+          )}
         </div>
 
-        {/* The one-line version stays visible: an answer without its assumption
-            is not checkable. The rest of the reasoning collapses. */}
-        <p className="mt-3 text-xs text-ink-500">
-          At {number(kase.usual_daily_units)} units a day, from {money(start.fromBalancePaisa)}, with no
-          further recharge.
+        {/* The one assumption the answer rests on, and nothing else. */}
+        <p className="mt-2 text-xs text-ink-500">
+          At {number(kase.usual_daily_units)} units a day from the {money(start.fromBalancePaisa)} on the
+          meter, with no further recharge.
         </p>
-        <Explainer label="What this assumes">
-          The daily figure is the household&rsquo;s stated usual use, applied to every day from{' '}
-          {longDate(kase.today)} onward. The slab counter resets on the 1st of each calendar month,
-          so later days in a heavy month cost more than earlier ones.
-        </Explainer>
       </article>
 
       {/* ---------------- Question two: how much to recharge today? ----------- */}
@@ -222,104 +215,135 @@ export default function Questions() {
           2 · How much must be recharged today?
         </h3>
 
-        <label className="mt-3 block text-sm" htmlFor="target-date">
+        <p className="mt-3 text-sm" id="target-date-label">
           To last until
-        </label>
-        <input
-          id="target-date"
-          type="date"
-          className="mt-1 w-full rounded-xl border border-ink-300/60 bg-white/80 px-4 py-3 text-base
-             focus:border-accent dark:bg-ink-900/40"
-          value={target}
-          min={start.fromDate}
-          onChange={(e) => setTargetDate(e.target.value)}
-        />
+        </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+          <input
+            id="target-date"
+            aria-labelledby="target-date-label"
+            type="date"
+            className="min-h-11 rounded-xl border border-ink-300/60 bg-white/80 px-3 text-base focus:border-accent dark:bg-ink-900/40 sm:min-h-0 sm:py-2"
+            value={target}
+            min={start.fromDate}
+            onChange={(e) => setTargetDate(e.target.value)}
+          />
+          <div role="group" aria-label="Quick targets" className="flex flex-wrap gap-1.5">
+            {chips.map((c) => {
+              const active = c.date === target
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setTargetDate(c.date)}
+                  className={`min-h-11 rounded-full border px-3 text-xs font-medium sm:min-h-0 sm:py-1.5 ${
+                    active
+                      ? 'border-accent bg-accent text-white'
+                      : 'border-ink-300/60 text-ink-700 hover:border-accent/60 hover:text-accent dark:text-ink-300'
+                  }`}
+                >
+                  {c.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
         <div aria-live="polite">
-        {needed?.error ? (
-          <p className="mt-3 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
-            {needed.error}
-          </p>
-        ) : parts ? (
-          <>
-            <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums">
-              <Money paisa={parts.netRequiredPaisa} />
-            </p>
-            <p className="mt-1 text-sm text-ink-500">
-              to cover {plural(parts.days, 'day')} at {number(kase.usual_daily_units)} units a day, through{' '}
-              {longDate(target)} — after the {money(start.fromBalancePaisa)} already on the
-              meter.
-            </p>
-            {parts.capped && (
-              <p className="mt-2 rounded-xl bg-accent-soft px-4 py-2 text-xs text-accent">
-                That date is further out than this tool projects. The figure covers the first{' '}
-                {plural(parts.cappedDays, 'day')} — about fifty years — which is as far as a
-                daily projection stays meaningful.
+          {needed?.error ? (
+            <p className="mt-3 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{needed.error}</p>
+          ) : parts ? (
+            <>
+              <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums">
+                <Money paisa={parts.netRequiredPaisa} />
               </p>
-            )}
-
-            <div className="mt-4 text-sm">
-              <Row
-                label="Energy"
-                hint={`every projected unit at the lowest slab rate, ৳${(BASE_RATE_PAISA / 100).toFixed(2)}`}
-                paisa={parts.energyPaisa}
-              />
-              <Row
-                label="Caused by being in a higher slab"
-                hint="the real slab-aware cost minus that base"
-                paisa={parts.higherSlabPaisa}
-              />
-              <Row
-                label="Fixed charges"
-                hint="demand charge ৳42.00 + meter rent ৳40.00, once per calendar month"
-                paisa={parts.fixedPaisa}
-              />
-              <Row label="VAT" hint="5% of the energy amount only" paisa={parts.vatPaisa} />
-              <Row label="Cost of those days" paisa={sumPaisa} strong />
-              <Row
-                label="Already on the meter"
-                hint="today's balance, which pays for the first of those days"
-                paisa={-start.fromBalancePaisa}
-              />
-              <Row label="Recharge today" paisa={parts.netRequiredPaisa} strong />
-            </div>
-
-            <p
-              className={`mt-3 text-xs ${reconciles ? 'text-ink-500' : 'font-medium text-danger'}`}
-            >
-              {reconciles ? (
-                <>
-                  The four parts add up: {money(parts.energyPaisa)} +{' '}
-                  {money(parts.higherSlabPaisa)} + {money(parts.fixedPaisa)} +{' '}
-                  {money(parts.vatPaisa)} = {money(parts.totalPaisa)}, less the{' '}
-                  {money(start.fromBalancePaisa)} already on the meter.
-                </>
-              ) : (
-                <>
-                  The four parts sum to {money(sumPaisa)} but the total is{' '}
-                  {money(parts.totalPaisa)} — they do not reconcile.
-                </>
+              <p className="mt-1 text-sm text-ink-500">
+                for {plural(parts.days, 'day', number)} through {longDate(target)}, after the{' '}
+                {money(start.fromBalancePaisa)} already on the meter.
+              </p>
+              {parts.capped && (
+                <p className="mt-2 rounded-xl bg-accent-soft px-4 py-2 text-xs text-accent">
+                  That date is further out than this tool projects. The figure covers the first{' '}
+                  {plural(parts.cappedDays, 'day', number)} — about fifty years — which is as far as a
+                  daily projection stays meaningful.
+                </p>
               )}
-            </p>
-          </>
-        ) : (
-          <p className="mt-4 rounded-card border border-dashed border-ink-300/70 px-6 py-8 text-center text-ink-500">
-            Pick a date to see what today's recharge needs to be.
-          </p>
-        )}
 
+              <div className="mt-4 text-sm">
+                <Row
+                  label={
+                    <Tooltip label={`Every projected unit priced at the lowest slab rate, ${money(BASE_PAISA_PER_UNIT)} a unit.`}>
+                      <span className={dotted}>Energy</span>
+                    </Tooltip>
+                  }
+                  paisa={parts.energyPaisa}
+                />
+                <Row
+                  label={
+                    <Tooltip label="The real slab-aware cost minus that lowest-rate base. Together the two are exactly the true energy charge.">
+                      <span className={dotted}>Caused by being in a higher slab</span>
+                    </Tooltip>
+                  }
+                  paisa={parts.higherSlabPaisa}
+                />
+                <Row
+                  label={
+                    <Tooltip label={`Demand charge ${money(DEMAND_CHARGE_PAISA)} + meter rent ${money(METER_RENT_PAISA)}, once per calendar month the projection spans.`}>
+                      <span className={dotted}>Fixed charges</span>
+                    </Tooltip>
+                  }
+                  paisa={parts.fixedPaisa}
+                />
+                <Row
+                  label={
+                    <Tooltip label={`${VAT_PERCENT}% of the energy amount only — never of the fixed charges.`}>
+                      <span className={dotted}>VAT</span>
+                    </Tooltip>
+                  }
+                  paisa={parts.vatPaisa}
+                />
+                {/* The four parts must visibly add up. The check sits on the total
+                    row itself, so it cannot drift from the figures it certifies. */}
+                <Row label="Cost of those days" paisa={parts.totalPaisa} strong check={reconciles} />
+                <Row label="Already on the meter" paisa={-start.fromBalancePaisa} />
+                <Row label="Recharge today" paisa={parts.netRequiredPaisa} strong />
+              </div>
+            </>
+          ) : (
+            <p className="mt-4 rounded-xl border border-dashed border-ink-300/70 px-6 py-8 text-center text-ink-500">
+              Pick a date to see what today&rsquo;s recharge needs to be.
+            </p>
+          )}
         </div>
 
         {parts && (
           <Explainer label="How the four parts are defined">
             The problem does not define a baseline for &ldquo;the part caused by being in a higher
             slab&rdquo;, so this is ours: <strong>energy</strong> is every projected unit charged at
-            the lowest slab rate (৳{(BASE_RATE_PAISA / 100).toFixed(2)}), and the{' '}
-            <strong>higher-slab part</strong> is the real slab-aware cost minus that base — so the
-            two together are exactly the true energy charge, and the four parts reconcile.
+            the lowest slab rate ({money(BASE_PAISA_PER_UNIT)}), and the{' '}
+            <strong>higher-slab part</strong> is the real slab-aware cost minus that base — so the two
+            together are exactly the true energy charge, and the four parts reconcile. The slab
+            counter resets on the 1st of each calendar month, so a target further into a heavy month
+            costs more per day than one early in it.
           </Explainer>
         )}
       </article>
+    </Frame>
+  )
+}
+
+function Frame({ children, reveal, ...rest }) {
+  return (
+    <section
+      ref={reveal?.ref}
+      {...rest}
+      className={`w-full rounded-card border border-ink-300/60 bg-white p-5 dark:bg-ink-900/40 ${
+        reveal ? `reveal ${reveal.shown ? 'reveal-in' : ''}` : ''
+      }`}
+    >
+      <h2 className="text-lg font-semibold tracking-tight">The family&rsquo;s two questions</h2>
+      {children}
     </section>
   )
 }
