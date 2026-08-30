@@ -25,6 +25,15 @@
      ------------------------------------------------------------------------- */
   --color-ink-50: #f6f6fa;
   --color-ink-100: #eceef5;
+  /* Left at #c9cad8 deliberately. It is 1.62:1 against a white card, under
+     WCAG 1.4.11's 3:1 for the edge of a control — but this one token is also
+     the header's muted text (`text-ink-300` on `bg-ink-700`, 6.83:1) and the
+     dark page's muted text (7.90:1). Darkening it to #a3a7bc was measured:
+     borders reach only 2.38:1, still short of 3:1, while the header text falls
+     to 4.66:1. Partial benefit, real cost — so it stays. Fixing borders
+     properly means a separate border token and dropping the /60 modifiers at
+     the call sites, which live in unit-owned files: a request for BOARD.md,
+     not a change to make here. */
   --color-ink-300: #c9cad8;
   --color-ink-500: #5b5f70;
   --color-ink-700: #303c51;
@@ -94,7 +103,12 @@ body {
      are lifted: periwinkle becomes the accent it was chosen to be, and sand
      carries the positive marks. Each is measured against #343134. */
   :root {
-    --color-ink-500: #a5a2b0;   /* 5.1:1 */
+    /* Was #a5a2b0. That clears AA on the dark page (5.13:1) but not on the two
+       tinted chips it also lands on — 4.43:1 on accent-soft, which is a miss,
+       not a rounding error. #aeabb9 clears every surface it is actually
+       rendered against: 4.93:1 on accent-soft, 5.02:1 on sand-soft, 5.70:1 on
+       the page. It is never rendered on a light surface in dark mode. */
+    --color-ink-500: #aeabb9;
     --color-accent: #a0a4d0;    /* 5.3:1 */
     --color-accent-soft: #3c3950;
     --color-sand-soft: #403a2b;
@@ -104,6 +118,47 @@ body {
 
   body {
     @apply bg-ink-900 text-ink-50;
+  }
+
+  /* ---------------------------------------------------------------------------
+     The tinted-surface trap, fixed here rather than in the component.
+
+     `--color-accent-soft` inverts for dark mode (#e8e9f4 -> #3c3950) but the ink
+     ramp deliberately does not — #343134 is the dark PAGE, not dark text. So any
+     element that pairs `bg-accent-soft` with `text-ink-900` renders dark-on-dark
+     once the OS is in dark mode: 1.16:1, which is invisible, not merely low.
+
+     It bites exactly one element, and it is the worst possible one — the verdict
+     banner of required item 4 ("Both habits cost exactly the same — ...") in
+     src/features/HabitCompare.jsx. That banner takes this branch whenever the two
+     habits tie, which is 22 of the 25 published cases including PUB-01, the case
+     the app seeds itself with. A judge on a dark-mode phone would open the live
+     URL and find item 4's answer blank.
+
+     Two classes outrank one and this rule is unlayered, so it beats Tailwind's
+     `@layer utilities` without !important and without touching a unit-owned file.
+     It stops applying by itself the day that call site carries its own `dark:`
+     variant. ink-50 on #3c3950 is 10.29:1.
+     --------------------------------------------------------------------------- */
+  .bg-accent-soft.text-ink-900,
+  .bg-sand-soft.text-ink-900 {
+    color: var(--color-ink-50);
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   Motion. The app animates a loading pulse and counts money up with NumberFlow;
+   both are decoration over content that is already correct. Respect the OS
+   setting rather than making a reader chase a moving number.
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

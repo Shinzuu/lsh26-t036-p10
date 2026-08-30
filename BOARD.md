@@ -58,6 +58,19 @@ not `done-live`; "looks right" is not `done-live`.
 
 One line each, newest on top. The integrator clears these and deletes the line.
 
+- **U3 → shinzuu: `ui-contrast` branch touches `src/app.css`, which is yours.** It is a
+  three-change, additive, CSS-only diff — no unit-owned component is touched. The one that
+  matters: in dark mode `bg-accent-soft` + `text-ink-900` renders at **1.16:1 (invisible)**,
+  and it lands on required item 4's verdict banner for 22 of the 25 published cases,
+  including the seeded PUB-01. Fixed with an unlayered shim rather than by editing
+  `HabitCompare.jsx`. Please review and merge, or take just that one rule. Full rationale and
+  test evidence: `testing/UI-CONTRAST-HANDOFF.md`.
+- **U3 → integrator, separate and NOT in that branch:** `border-ink-300` is 1.62:1 on a white
+  card, under WCAG 1.4.11's 3:1 for a control edge. Fixing it properly needs a dedicated
+  border token plus dropping the `/60` opacity modifiers at call sites in unit-owned files —
+  measured, and too broad to do at freeze. Also `BalanceChart.jsx`'s month-boundary dashed
+  lines sit at 1.51:1, and SPEC requires month boundaries "visible"; `text-ink-500` would be
+  5.88:1. Both are Rimjhim's/your call, not mine to make.
 - (cleared 19:15 — U3's requests are all satisfied: `App.jsx` renders `Questions`,
   `store.js` exists, `SPEC.md` is in the repo, and the merge freeze is set.)
 - (cleared 18:46 — `src/App.jsx` now renders `DataSource`, and `src/lib/store.js` exists. U1 is visible.)
