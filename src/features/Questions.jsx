@@ -18,6 +18,7 @@
 import { useMemo, useState } from 'react'
 import NumberFlow from '@number-flow/react'
 import { useCase } from '../lib/store.js'
+import Explainer from './Explainer.jsx'
 import { formatBDT, projectRunOut, requiredRecharge } from '../lib/tariff.js'
 
 /** Lowest slab rate, in paisa — the baseline the "higher slab" part is measured against. */
@@ -200,12 +201,17 @@ export default function Questions() {
 
         </div>
 
+        {/* The one-line version stays visible: an answer without its assumption
+            is not checkable. The rest of the reasoning collapses. */}
         <p className="mt-3 text-xs text-ink-500">
-          Assumes {kase.usual_daily_units} units a day — the household's usual daily use — from a
-          balance of {formatBDT(start.fromBalancePaisa)} on {longDate(kase.today)}, with no further
-          recharge. The slab counter resets on the 1st of each calendar month, so later days in a
-          heavy month cost more.
+          At {kase.usual_daily_units} units a day, from {formatBDT(start.fromBalancePaisa)}, with no
+          further recharge.
         </p>
+        <Explainer label="What this assumes">
+          The daily figure is the household&rsquo;s stated usual use, applied to every day from{' '}
+          {longDate(kase.today)} onward. The slab counter resets on the 1st of each calendar month,
+          so later days in a heavy month cost more than earlier ones.
+        </Explainer>
       </article>
 
       {/* ---------------- Question two: how much to recharge today? ----------- */}
@@ -308,13 +314,13 @@ export default function Questions() {
         </div>
 
         {parts && (
-          <p className="mt-4 border-t border-ink-300/40 pt-3 text-xs text-ink-500">
-          The problem does not define a baseline for “the part caused by being in a higher slab”, so
-          this is ours: <strong>energy</strong> is every projected unit charged at the lowest slab
-          rate (৳{(BASE_RATE_PAISA / 100).toFixed(2)}), and the{' '}
-          <strong>higher-slab part</strong> is the real slab-aware cost minus that base — so the two
-          together are exactly the true energy charge, and the four parts reconcile.
-        </p>
+          <Explainer label="How the four parts are defined">
+            The problem does not define a baseline for &ldquo;the part caused by being in a higher
+            slab&rdquo;, so this is ours: <strong>energy</strong> is every projected unit charged at
+            the lowest slab rate (৳{(BASE_RATE_PAISA / 100).toFixed(2)}), and the{' '}
+            <strong>higher-slab part</strong> is the real slab-aware cost minus that base — so the
+            two together are exactly the true energy charge, and the four parts reconcile.
+          </Explainer>
         )}
       </article>
     </section>

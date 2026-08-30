@@ -29,7 +29,9 @@ export default function CasePicker({ current, onLoad, onError }) {
   return (
     <label className="relative flex min-w-0 items-center gap-2 text-sm">
       <span className="sr-only">Household</span>
-      <span className="pointer-events-none absolute left-3 text-ink-500">
+      {/* Both indicators are centred on the control's own axis rather than left
+          to their static position, which put them at the top of the label. */}
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-500">
         {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
       </span>
       <select
@@ -52,7 +54,10 @@ export default function CasePicker({ current, onLoad, onError }) {
             </option>
           ))}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-3 size-4 text-ink-500" aria-hidden="true" />
+      <ChevronDown
+        className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-ink-500"
+        aria-hidden="true"
+      />
     </label>
   )
 }

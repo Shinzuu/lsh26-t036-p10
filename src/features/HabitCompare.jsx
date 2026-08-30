@@ -26,6 +26,7 @@ import {
   METER_RENT_PAISA,
 } from '../lib/tariff.js'
 import { useCase } from '../lib/store.js'
+import Explainer from './Explainer.jsx'
 
 const FIXED_PER_MONTH_PAISA = DEMAND_CHARGE_PAISA + METER_RENT_PAISA
 
@@ -144,22 +145,26 @@ export default function HabitCompare({ kase: kaseProp }) {
     <Frame>
       <header>
         <p className="mt-1 text-sm text-ink-500">
-          Both habits run over{' '}
+          Over{' '}
           <strong className="font-medium text-ink-700 dark:text-ink-100">
             {months.map(monthLabel).join(', ')}
-          </strong>{' '}
+          </strong>
+          , on identical consumption.
+        </p>
+        <Explainer label="What is being compared, and what “cost” means">
+          Both habits run{' '}
           {flatSource ? (
             <>
-              on a flat {comparison.daily_units} units a day — this case names a source other
-              than its own readings
+              on a flat {comparison.daily_units} units a day — this case names a source other than
+              its own readings
             </>
           ) : (
             <>on the household&rsquo;s own daily readings</>
-          )}{' '}
-          — identical consumption, the same calendar-month slab counter, both starting from{' '}
-          {money(comparison.opening_balance_bdt)}. Cost is what the meter
-          consumes: energy, VAT and the monthly fixed charges — not the amount deposited.
-        </p>
+          )}
+          , against the same calendar-month slab counter, both starting from{' '}
+          {money(comparison.opening_balance_bdt)}. Cost is what the meter consumes — energy, VAT and
+          the monthly fixed charges — not the amount deposited.
+        </Explainer>
         {missingMonths.length > 0 && (
           <p className="mt-2 text-sm text-ink-500">
             {missingMonths.length === 1 ? 'One named month has' : `${missingMonths.length} named months have`}{' '}
@@ -172,7 +177,9 @@ export default function HabitCompare({ kase: kaseProp }) {
       {/* The verdict, stated before the detail so a judge reads it in one glance. */}
       <p
         className={`mt-5 rounded-card px-4 py-3 text-base font-medium ${
-          equal ? 'bg-accent-soft text-ink-900' : 'bg-ok/10 text-ink-900 dark:text-ink-50'
+          equal
+            ? 'bg-accent-soft text-ink-900 dark:text-ink-50'
+            : 'bg-ok/10 text-ink-900 dark:text-ink-50'
         }`}
       >
         {equal ? (
@@ -203,9 +210,6 @@ export default function HabitCompare({ kase: kaseProp }) {
 
       {/* The required sentence: where a difference can and cannot come from. */}
       <p className="mt-4 rounded-card bg-white px-4 py-3 text-sm leading-relaxed text-ink-700 shadow-sm dark:bg-ink-900/40 dark:text-ink-100">
-        Energy and VAT are identical under both habits — the same units are burned against
-        the same calendar-month slab counter, so <em>when</em> the meter is recharged cannot
-        change the rate a unit is charged at.{' '}
         {equal ? (
           <>
             {lowMonths === 0 ? (
@@ -233,6 +237,14 @@ export default function HabitCompare({ kase: kaseProp }) {
           </>
         )}
       </p>
+
+      <Explainer label="Why timing cannot buy a cheaper rate">
+        Energy and VAT are identical under both habits — the same units are burned against the same
+        calendar-month slab counter, so <em>when</em> the meter is recharged cannot change the rate
+        a unit is charged at. The only thing a habit can move is how many calendar months saw a
+        first recharge, and each of those costs {formatBDT(FIXED_PER_MONTH_PAISA)}. A comparison
+        that reported a slab saving would be wrong, not merely rounded differently.
+      </Explainer>
     </Frame>
   )
 }

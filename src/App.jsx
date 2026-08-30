@@ -188,9 +188,49 @@ function Layout() {
         )}
       </main>
 
-      <footer className="border-t border-ink-300/60">
-        <div className="mx-auto w-full max-w-5xl px-4 py-6 text-xs text-ink-500 sm:px-6">
-          Team Miasma · LSH26-T036 · Problem P10 · LofiStack Hackathon 2026
+      <footer className="mt-4 border-t border-ink-300/60">
+        <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+          <div className="grid gap-8 sm:grid-cols-3">
+            <div>
+              <p className="text-sm font-semibold tracking-tight">Recharge Advisor</p>
+              <p className="mt-1.5 max-w-xs text-sm text-ink-500">
+                Rebuilds a prepaid meter day by day on the published slab tariff, so the next
+                recharge is a number rather than a guess.
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-500">
+                The tariff
+              </p>
+              <p className="mt-1.5 text-sm text-ink-500">
+                Six slabs from ৳4.63 to ৳10.70 a unit, counted per calendar month.
+                <br />
+                ৳42.00 demand charge + ৳40.00 meter rent, once a month.
+                <br />
+                5% VAT on energy only.
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-500">On this page</p>
+              <ul className="mt-1.5 space-y-1 text-sm">
+                {SECTIONS.map((s) => (
+                  <li key={s.id}>
+                    <a className="text-ink-500 underline-offset-2 hover:text-accent hover:underline" href={`#${s.id}`}>
+                      {s.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <p className="mt-8 border-t border-ink-300/50 pt-5 text-xs text-ink-500">
+            Built by <span className="font-medium text-ink-700 dark:text-ink-300">Miasma</span>.
+            Figures are computed from the readings you load; they are an estimate of what the
+            meter will do, not a bill.
+          </p>
         </div>
       </footer>
     </div>
