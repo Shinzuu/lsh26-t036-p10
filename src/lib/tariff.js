@@ -301,6 +301,12 @@ export function simulate(kase) {
 
 /** Guard against a runaway projection when daily use is zero or the target is absurd. */
 const MAX_PROJECTION_DAYS = 3650
+// The required-recharge window is capped separately and far more generously: a
+// run-out projection stops when the money does, but a target date is chosen by
+// the user and 50 years of daily slab arithmetic still answers in milliseconds.
+// Only an absurd date - the year 9999 is two clicks away in a native date
+// picker - needs to be refused.
+const MAX_TARGET_SPAN_DAYS = 18262
 
 /**
  * Forward projection at a flat daily rate, no recharges.
@@ -400,14 +406,21 @@ export function requiredRecharge({
     fixedPaisa: 0,
     vatPaisa: 0,
     netRequiredPaisa: 0,
+    capped: false,
+    cappedDays: MAX_TARGET_SPAN_DAYS,
     days: 0,
     units: 0,
     months: [],
   }
   if (!fromDate || !targetDate) return empty
 
-  const span = daysBetween(fromDate, targetDate)
-  if (span < 0) return empty
+  const rawSpan = daysBetween(fromDate, targetDate)
+  if (rawSpan < 0) return empty
+  // A native date picker can reach the year 9999. Projecting 2.9 million days
+  // one at a time blocks the main thread for minutes, so the window is capped
+  // the same way projectRunOut caps its own loop, and the caller is told.
+  const capped = rawSpan >= MAX_TARGET_SPAN_DAYS
+  const span = capped ? MAX_TARGET_SPAN_DAYS - 1 : rawSpan
 
   const units = Math.max(0, Math.trunc(Number(dailyUnits) || 0))
   const charged = new Set(chargedMonths)
@@ -453,6 +466,8 @@ export function requiredRecharge({
     fixedPaisa,
     vatPaisa,
     netRequiredPaisa: Math.max(0, totalPaisa - (Number(fromBalancePaisa) || 0)),
+    capped,
+    cappedDays: MAX_TARGET_SPAN_DAYS,
     days: span + 1,
     units: totalUnits,
     months,

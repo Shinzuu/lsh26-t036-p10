@@ -42,6 +42,8 @@ function longDate(iso) {
   })
 }
 
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+
 /** Days between two ISO dates, inclusive of neither end. */
 function daysBetween(fromIso, toIso) {
   const a = new Date(`${fromIso}T00:00:00Z`).getTime()
@@ -87,13 +89,20 @@ function Row({ label, hint, paisa, strong = false }) {
 
 export default function Questions() {
   const { kase, sim } = useCase()
-  const [targetDate, setTargetDate] = useState('')
+  const [targetDate, setTargetDate] = useState(null)
+  // A date typed for one household is meaningless for the next, so loading a
+  // different case drops it and the field falls back to that case's own target.
+  const [targetFor, setTargetFor] = useState(null)
+  if (kase && targetFor !== kase.case_id) {
+    setTargetFor(kase.case_id)
+    if (targetDate !== null) setTargetDate(null)
+  }
 
   const start = useMemo(() => (kase && sim ? projectionStart(kase, sim) : null), [kase, sim])
 
   // The input is uncontrolled until the case lands, then defaults to the case's
   // own target_date. Loading a different case moves the default with it.
-  const target = targetDate || kase?.target_date || ''
+  const target = targetDate ?? kase?.target_date ?? ''
 
   const runOut = useMemo(() => {
     if (!start) return null
@@ -177,7 +186,7 @@ export default function Questions() {
               {longDate(runOut.runsOutOn)}
             </p>
             <p className="mt-1 text-sm text-ink-500">
-              {daysBetween(start.fromDate, runOut.runsOutOn) + 1} days from{' '}
+              {plural(daysBetween(start.fromDate, runOut.runsOutOn) + 1, 'day')} from{' '}
               {longDate(start.fromDate)}.
             </p>
           </>
@@ -224,10 +233,17 @@ export default function Questions() {
               {formatBDT(parts.netRequiredPaisa)}
             </p>
             <p className="mt-1 text-sm text-ink-500">
-              to cover {days} days at {kase.usual_daily_units} units a day, through{' '}
+              to cover {plural(parts.days, 'day')} at {kase.usual_daily_units} units a day, through{' '}
               {longDate(target)} — after the {formatBDT(start.fromBalancePaisa)} already on the
               meter.
             </p>
+            {parts.capped && (
+              <p className="mt-2 rounded-xl bg-accent-soft px-4 py-2 text-xs text-accent">
+                That date is further out than this tool projects. The figure covers the first{' '}
+                {plural(parts.cappedDays, 'day')} — about fifty years — which is as far as a
+                daily projection stays meaningful.
+              </p>
+            )}
 
             <div className="mt-4 text-sm">
               <Row
@@ -279,13 +295,15 @@ export default function Questions() {
           </p>
         )}
 
-        <p className="mt-4 border-t border-ink-300/40 pt-3 text-xs text-ink-500">
+        {parts && (
+          <p className="mt-4 border-t border-ink-300/40 pt-3 text-xs text-ink-500">
           The problem does not define a baseline for “the part caused by being in a higher slab”, so
           this is ours: <strong>energy</strong> is every projected unit charged at the lowest slab
           rate (৳{(BASE_RATE_PAISA / 100).toFixed(2)}), and the{' '}
           <strong>higher-slab part</strong> is the real slab-aware cost minus that base — so the two
           together are exactly the true energy charge, and the four parts reconcile.
         </p>
+        )}
       </article>
     </section>
   )

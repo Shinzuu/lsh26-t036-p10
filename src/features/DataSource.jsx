@@ -114,8 +114,8 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
         <ul className="mt-2 flex flex-wrap gap-2">
           {summary.months.map((m) => {
             const tags = []
-            if (m.month === summary.lightest) tags.push('lightest')
-            if (m.month === summary.heaviest) tags.push('heaviest')
+            if (summary.lightestMonths.includes(m.month)) tags.push('lightest')
+            if (summary.heaviestMonths.includes(m.month)) tags.push('heaviest')
             if (m.month === summary.lateLarge) tags.push('large late recharge')
             return (
               <li
@@ -138,7 +138,13 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
           })}
         </ul>
         <p className="mt-2 text-xs text-ink-500">
-          Lightest and heaviest are the months with the least and most units consumed.
+          {summary.lightestMonths.length > 0
+            ? `Lightest and heaviest are the months with the least and most units consumed${
+                summary.lightestMonths.length > 1 || summary.heaviestMonths.length > 1
+                  ? '; where months tie, every tied month is labelled'
+                  : ''
+              }.`
+            : 'Too few months to call one lighter than another, so neither label is shown.'}
           {summary.lateLarge && summary.lateLargeRecharge ? (
             <>
               {' '}

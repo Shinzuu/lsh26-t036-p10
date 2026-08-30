@@ -41,6 +41,9 @@ const COMPARISON_REQUIRED = [
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 const MONTH = /^\d{4}-\d{2}$/
 const DECIMAL = /^-?\d+(\.\d+)?$/
+// A recharge is money going in. A negative one is nonsense the balance would
+// silently absorb, so amounts are checked with their own sign-free pattern.
+const AMOUNT = /^\d+(\.\d+)?$/
 
 function fail(message) {
   throw new Error(message)
@@ -62,10 +65,14 @@ export function parseCases(input) {
       fail(`That is not valid JSON: ${e.message}`)
     }
   }
-  if (!json || typeof json !== 'object') fail('Expected a JSON object, got ' + typeof json)
+  if (json === null) fail('That is null, not a case. Paste a case object, or a file with a "cases" list.')
+  if (!json || typeof json !== 'object') fail(`Expected a case object, got ${typeof json}.`)
 
-  const cases = Array.isArray(json) ? json : Array.isArray(json.cases) ? json.cases : [json]
-  if (cases.length === 0) fail('The file has a "cases" list, but it is empty.')
+  const fromKey = !Array.isArray(json) && Array.isArray(json.cases)
+  const cases = Array.isArray(json) ? json : fromKey ? json.cases : [json]
+  if (cases.length === 0) {
+    fail(fromKey ? 'The file has a "cases" list, but it is empty.' : 'That is an empty list — paste a case, or a file with a "cases" list in it.')
+  }
   return cases.map((c, i) => validateCase(c, cases.length > 1 ? ` (case ${i + 1})` : ''))
 }
 
@@ -97,8 +104,8 @@ function validateCase(kase, where = '') {
   if (!Array.isArray(kase.recharges)) fail(`"recharges" must be a list${where}.`)
   kase.recharges.forEach((r, i) => {
     if (!r || !DATE.test(r.date ?? '')) fail(`recharges[${i}].date must look like 2026-01-09${where}.`)
-    if (!DECIMAL.test(String(r.amount_bdt ?? ''))) {
-      fail(`recharges[${i}].amount_bdt must be an amount like "300.00"${where}.`)
+    if (!AMOUNT.test(String(r.amount_bdt ?? ''))) {
+      fail(`recharges[${i}].amount_bdt must be an amount like "300.00"${where} — a recharge cannot be negative.`)
     }
   })
 
@@ -175,12 +182,16 @@ export function monthSummary(kase) {
   const months = [...byMonth.values()].sort((a, b) => (a.month < b.month ? -1 : 1))
   const withReadings = months.filter((m) => m.readings > 0)
 
-  let lightest = null
-  let heaviest = null
-  for (const m of withReadings) {
-    if (!lightest || m.units < lightest.units) lightest = m
-    if (!heaviest || m.units > heaviest.units) heaviest = m
-  }
+  // A month is only "lightest" or "heaviest" against a month that differs. With
+  // one month of readings, or with every month equal, both labels would land on
+  // the same row and read as a bug rather than as the truth. Ties are labelled
+  // on every month that ties, so nothing is silently dropped.
+  const totals = withReadings.map((m) => m.units)
+  const min = Math.min(...totals)
+  const max = Math.max(...totals)
+  const meaningful = withReadings.length > 1 && min !== max
+  const lightestMonths = meaningful ? withReadings.filter((m) => m.units === min).map((m) => m.month) : []
+  const heaviestMonths = meaningful ? withReadings.filter((m) => m.units === max).map((m) => m.month) : []
 
   let lateLarge = null
   for (const m of months) {
@@ -194,8 +205,10 @@ export function monthSummary(kase) {
 
   return {
     months,
-    lightest: lightest?.month ?? null,
-    heaviest: heaviest?.month ?? null,
+    lightest: lightestMonths[0] ?? null,
+    heaviest: heaviestMonths[0] ?? null,
+    lightestMonths,
+    heaviestMonths,
     lateLarge: lateLarge?.month ?? null,
     lateLargeRecharge: lateLarge?.largestRecharge ?? null,
     totalUnits: months.reduce((sum, m) => sum + m.units, 0),
