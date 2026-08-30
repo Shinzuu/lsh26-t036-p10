@@ -30,7 +30,22 @@ was never re-run against the deployed URL.
 
 One line each, newest on top. The integrator clears these and deletes the line.
 
-- (none)
+- **U3 → integrator: wire the questions panel into `src/App.jsx`.** `u3-questions` is
+  pushed but unreachable from `main.jsx`, so it cannot go live. Exact diff requested:
+
+  ```diff
+  + import Questions from './features/Questions.jsx'
+  ...
+      <main>
+  +     <Questions />
+      </main>
+  ```
+
+  It needs `src/lib/store.js` exporting `useCase()` and U2's `src/lib/tariff.js` exporting
+  `projectRunOut`, `requiredRecharge` and `formatBDT` per SPEC-P10. Until both exist the
+  import fails at build, so merge U2 first or land the store stub.
+- **U3 → integrator: `SPEC.md` is not in this repo.** Copy it from the prep repo's
+  `event/SPEC-P10.md`. Also `BOARD.md`'s `FREEZE: __:__` header is still blank.
 
 ## Notes — things everyone should know
 
