@@ -173,11 +173,12 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
         {/* Load another household: paste or file, both through the same parser. */}
         <details className="mt-4">
           <summary className="cursor-pointer text-sm font-medium text-accent">
-            Load a different household
+            Paste or upload your own data
           </summary>
           <div className="mt-3 space-y-3">
             <label className="block text-sm" htmlFor="case-paste">
-              Paste a case, or the whole published sample file
+              The 25 published households are in the selector at the top of the page. To use
+              your own, paste a case here or upload a JSON file in the same shape.
             </label>
             <textarea
               id="case-paste"

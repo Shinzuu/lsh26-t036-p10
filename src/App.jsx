@@ -1,42 +1,71 @@
 /**
  * App shell. INTEGRATOR-OWNED — do not edit in a unit branch.
  *
- * One screen, no router. The four panels map one-to-one onto the four required
- * items, so a judge reading the problem statement finds each without being told
- * where to look. Each panel is a separate unit's file; this file only decides
- * where they sit and hands them the store.
+ * One screen, no router: a sticky bar carrying the brand and the household
+ * selector, the three headline figures, jump links, then the four sections that
+ * map one-to-one onto the four required items. A judge reading the problem
+ * statement finds each without being told where to look, and a family reading
+ * it gets the answer before the working.
  */
 import { StoreProvider, useCase } from './lib/store.js'
-import DataSource from './features/DataSource.jsx'
 import { SEED } from './lib/dataset.js'
+import CasePicker from './features/CasePicker.jsx'
+import Hero from './features/Hero.jsx'
+import DataSource from './features/DataSource.jsx'
 import BalanceChart from './features/BalanceChart.jsx'
 import Questions from './features/Questions.jsx'
 import HabitCompare from './features/HabitCompare.jsx'
 
-const APP_NAME = 'Recharge Advisor'
-const TAGLINE = 'Where the prepaid balance actually goes, and what to recharge before it runs out.'
+const SECTIONS = [
+  { id: 'household', label: 'Household' },
+  { id: 'balance', label: 'Balance' },
+  { id: 'questions', label: 'Questions' },
+  { id: 'habits', label: 'Habits' },
+]
 
 function Layout() {
-  const { kase, load, error } = useCase()
+  const { kase, load, error, setError } = useCase()
   const empty = !kase || !kase.days?.length
 
   return (
-    <>
-      <header className="mx-auto w-full max-w-5xl px-4 pt-8 pb-4 sm:px-6">
-        <p className="text-xs font-medium uppercase tracking-wide text-accent">
-          LSH26-T036 · Problem P10
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">{APP_NAME}</h1>
-        <p className="mt-1 text-ink-500">{TAGLINE}</p>
+    <div className="min-h-dvh">
+      <header className="sticky top-0 z-20 border-b border-ink-300/60 bg-ink-50/85 backdrop-blur dark:bg-ink-900/85">
+        <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:px-6">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold tracking-tight sm:text-base">
+              Recharge Advisor
+            </p>
+            <p className="truncate text-xs text-ink-500">Prepaid meter · slab-aware</p>
+          </div>
+          {kase && (
+            <div className="w-40 shrink-0 sm:w-56">
+              <CasePicker
+                current={kase.case_id}
+                onLoad={load}
+                onError={(m) => setError?.(m)}
+              />
+            </div>
+          )}
+        </div>
+
+        <nav aria-label="Sections" className="mx-auto w-full max-w-5xl px-4 pb-2 sm:px-6">
+          <ul className="flex gap-1.5 overflow-x-auto text-sm">
+            {SECTIONS.map((s) => (
+              <li key={s.id}>
+                <a
+                  href={`#${s.id}`}
+                  className="block whitespace-nowrap rounded-lg px-2.5 py-1 text-ink-500 hover:bg-accent-soft hover:text-accent"
+                >
+                  {s.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl space-y-6 px-4 pb-16 sm:px-6">
-        {/* Item 1 — the household's readings and recharges, and how a judge loads their own. */}
-        <DataSource kase={kase} error={error} onLoad={load} />
-
+      <main className="mx-auto w-full max-w-5xl space-y-8 px-4 pb-20 pt-6 sm:px-6">
         {empty ? (
-          // An empty screen is an invitation, not a status line: the action that
-          // fills it sits inside the message.
           <div className="rounded-card border border-dashed border-ink-300 p-8 text-center">
             <p className="font-medium">Nothing to rebuild yet.</p>
             <p className="mx-auto mt-1 max-w-md text-sm text-ink-500">
@@ -54,27 +83,59 @@ function Layout() {
           </div>
         ) : (
           <>
-            {/* Item 2 — the balance rebuilt day by day, with every recharge marked. */}
-            <BalanceChart />
+            <div className="space-y-4">
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                  Where the money on this meter actually goes
+                </h1>
+                <p className="mt-1 max-w-2xl text-ink-500">
+                  Electricity is priced in slabs that climb as the month goes on and reset on
+                  the 1st. This rebuilds the balance day by day on that tariff, so the next
+                  recharge is a number rather than a guess.
+                </p>
+              </div>
+              <Hero />
+            </div>
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            {error && (
+              <p
+                role="alert"
+                className="flex items-start gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger"
+              >
+                <span className="flex-1">{error}</span>
+              </p>
+            )}
+
+            {/* Item 1 — the household's readings and recharges, and how a judge loads their own. */}
+            <section id="household" className="scroll-mt-32">
+              <DataSource kase={kase} error={null} onLoad={load} />
+            </section>
+
+            {/* Item 2 — the balance rebuilt day by day, with every recharge marked. */}
+            <section id="balance" className="scroll-mt-32">
+              <BalanceChart />
+            </section>
+
+            <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
               {/* Item 3 — when does it run out, and how much to recharge today. */}
-              <div className="min-w-0">
+              <section id="questions" className="min-w-0 scroll-mt-32">
                 <Questions />
-              </div>
+              </section>
               {/* Item 4 — low-balance habit against monthly habit, same consumption. */}
-              <div className="min-w-0">
+              <section id="habits" className="min-w-0 scroll-mt-32">
                 <HabitCompare />
-              </div>
+              </section>
             </div>
           </>
         )}
       </main>
 
-      <footer className="mx-auto w-full max-w-5xl px-4 pb-10 text-xs text-ink-500 sm:px-6">
-        Team Miasma · LSH26-T036 · LofiStack Hackathon 2026
+      <footer className="border-t border-ink-300/60">
+        <div className="mx-auto w-full max-w-5xl px-4 py-6 text-xs text-ink-500 sm:px-6">
+          Team Miasma · LSH26-T036 · Problem P10 · LofiStack Hackathon 2026
+        </div>
       </footer>
-    </>
+    </div>
   )
 }
 

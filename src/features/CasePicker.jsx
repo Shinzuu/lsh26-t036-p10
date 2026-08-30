@@ -1,0 +1,58 @@
+/**
+ * Household selector — the app's front door.
+ *
+ * The 25 published households live in a separate JSON that is fetched only when
+ * this control is first opened, so the first paint stays small. Loading one
+ * swaps the whole application over to it.
+ */
+import { useState } from 'react'
+import { ChevronDown, Loader2 } from 'lucide-react'
+import { parseCases } from '../lib/dataset.js'
+
+export default function CasePicker({ current, onLoad, onError }) {
+  const [cases, setCases] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  async function ensureLoaded() {
+    if (cases || loading) return
+    setLoading(true)
+    try {
+      const mod = await import('../data/cases-p10.json')
+      setCases(parseCases(mod.default))
+    } catch (e) {
+      onError?.(`Could not load the sample households: ${e.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <label className="relative flex min-w-0 items-center gap-2 text-sm">
+      <span className="sr-only">Household</span>
+      <span className="pointer-events-none absolute left-3 text-ink-500">
+        {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+      </span>
+      <select
+        className="w-full min-w-0 appearance-none rounded-xl border border-ink-300/70 bg-white py-2 pl-3 pr-9
+           text-sm font-medium text-ink-900 focus:border-accent dark:bg-ink-900/60 dark:text-ink-50"
+        value={current}
+        onFocus={ensureLoaded}
+        onMouseDown={ensureLoaded}
+        onChange={(e) => {
+          const next = cases?.find((c) => c.case_id === e.target.value)
+          if (next) onLoad(next)
+        }}
+      >
+        <option value={current}>{current}</option>
+        {(cases ?? [])
+          .filter((c) => c.case_id !== current)
+          .map((c) => (
+            <option key={c.case_id} value={c.case_id}>
+              {c.case_id} · {c.days.length} days
+            </option>
+          ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-3 size-4 text-ink-500" aria-hidden="true" />
+    </label>
+  )
+}
