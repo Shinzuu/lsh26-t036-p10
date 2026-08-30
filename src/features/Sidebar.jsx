@@ -58,12 +58,31 @@ export const STEPS = [
   },
 ]
 
-export default function Sidebar({ active, onSelect, className = '', onNavigate }) {
+export default function Sidebar({ active, onSelect, className = '', onNavigate, id, showProgress = true }) {
+  const index = STEPS.findIndex((s) => s.id === active)
+  const position = index < 0 ? 0 : index + 1
+
   return (
-    <nav aria-label="Sections" className={className}>
-      <p className="px-3 pb-2 text-xs font-medium uppercase tracking-[0.14em] text-ink-500">
-        Steps
-      </p>
+    <nav id={id} aria-label="Sections" className={className}>
+      {/* Where you are, before the list of where you could be. Seven identical
+          rows give no sense of progress; "3 of 7" and a filled bar do, and they
+          cost one line. */}
+      {showProgress && (
+        <div className="px-3 pb-2">
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-ink-500">
+            Step {position} of {STEPS.length}
+          </p>
+          <div
+            className="mt-1.5 h-1 overflow-hidden rounded-full bg-ink-100 dark:bg-ink-700/40"
+            role="presentation"
+          >
+            <div
+              className="h-full rounded-full bg-accent transition-[width] duration-300"
+              style={{ width: `${(position / STEPS.length) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
       <ul className="space-y-0.5">
         {STEPS.map((s) => {
           const current = s.id === active
@@ -100,17 +119,15 @@ export default function Sidebar({ active, onSelect, className = '', onNavigate }
                 </span>
                 <span className="min-w-0">
                   <span className="block text-sm font-medium leading-tight">{s.label}</span>
-                  {/* The descriptions earn their place in the desktop sidebar,
-                      where they sit beside the content. Stacked above it on a
-                      phone they push the first figure off the screen, so the
-                      list there is labels only. */}
-                  <span
-                    className={`mt-0.5 hidden text-xs leading-snug lg:block ${
-                      current ? 'text-accent/80' : 'text-ink-500'
-                    }`}
-                  >
-                    {s.blurb}
-                  </span>
+                  {/* Only the step you are on explains itself. Seven blurbs at
+                      once is a wall of secondary text competing with the figures
+                      beside it — and six of them describe somewhere you are not.
+                      The one that is useful is the one under the cursor. */}
+                  {current && (
+                    <span className="mt-0.5 hidden text-xs leading-snug text-accent/80 lg:block">
+                      {s.blurb}
+                    </span>
+                  )}
                 </span>
               </button>
             </li>
