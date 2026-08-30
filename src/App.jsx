@@ -8,8 +8,11 @@
  * it gets the answer before the working.
  */
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { ArrowLeft, ArrowRight, ChevronDown } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ChevronDown, HelpCircle, Menu, Settings2 } from 'lucide-react'
 import Sidebar, { STEPS } from './features/Sidebar.jsx'
+import Drawer from './features/ui/Drawer.jsx'
+import Tooltip from './features/ui/Tooltip.jsx'
+import { ToastProvider, useToast } from './features/ui/Toasts.jsx'
 import { DisplayProvider, useDisplay, CURRENCIES } from './lib/display.jsx'
 import { StoreProvider, useCase } from './lib/store.js'
 import { SEED } from './lib/dataset.js'
@@ -52,48 +55,83 @@ function PanelSkeleton({ lines = 4 }) {
 
 
 /**
- * Display preferences. Currency and numerals only — nothing here touches the
- * arithmetic, and taka is always what a fresh load shows.
+ * The header's tools: a settings popover and a help hint.
+ *
+ * Currency used to sit bare in the bar, which made a preference look like part
+ * of the data. It now lives behind a settings button with a label and an
+ * explanation, which is both quieter and clearer.
  */
-function DisplayControls() {
-  const { currency, setCurrency } = useDisplay()
-  return (
-    <div className="flex items-center gap-2">
-      <label className="relative flex items-center gap-2">
-        {/* The visible word is `hidden` below lg, and display:none content is
-            excluded from the accessibility tree — so under 1024px this was a
-            combobox a screen reader announced with no name at all. The explicit
-            aria-label carries the name at every width; the span stays for the
-            sighted label on wide screens. */}
-        <span className="hidden shrink-0 text-xs text-ink-300 lg:block">Currency</span>
-        <select
-          aria-label="Currency"
-          value={currency.code}
-          onChange={(e) => setCurrency(e.target.value)}
-          className="appearance-none rounded-xl border border-white/25 bg-transparent py-2 pl-2.5 pr-7 text-sm text-ink-50 focus:border-sand"
-        >
-          {Object.values(CURRENCIES).map((c) => (
-            <option key={c.code} value={c.code} className="text-ink-900">
-              {c.symbol} {c.code}
-            </option>
-          ))}
-        </select>
-        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-ink-300" aria-hidden="true" />
-      </label>
+function HeaderTools() {
+  const { currency, setCurrency, rateNote } = useDisplay()
+  const [open, setOpen] = useState(false)
 
+  // Close on Escape or a click anywhere else, the way a menu is expected to.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e) => e.key === 'Escape' && setOpen(false)
+    const onClick = (e) => {
+      if (!e.target.closest?.('[data-header-tools]')) setOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('click', onClick)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('click', onClick)
+    }
+  }, [open])
+
+  return (
+    <div className="relative flex items-center gap-1" data-header-tools>
+      <Tooltip
+        side="bottom"
+        label="Every figure is rebuilt from the household's own readings using the published slab tariff. Nothing is estimated unless the screen says so."
+      >
+        <span className="flex size-10 items-center justify-center rounded-xl text-ink-300 hover:bg-white/10 hover:text-white">
+          <HelpCircle className="size-5" aria-hidden="true" />
+          <span className="sr-only">How these figures are produced</span>
+        </span>
+      </Tooltip>
+
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="true"
+        className={`flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-sm ${
+          open ? 'bg-white/15 text-white' : 'text-ink-300 hover:bg-white/10 hover:text-white'
+        }`}
+      >
+        <Settings2 className="size-4" aria-hidden="true" />
+        <span className="hidden sm:inline">{currency.code}</span>
+        <ChevronDown className="size-3.5" aria-hidden="true" />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-12 z-40 w-72 rounded-card border border-ink-300/60 bg-white p-4 text-ink-900 shadow-xl dark:bg-ink-900 dark:text-ink-50">
+          <p className="text-sm font-semibold tracking-tight">Display</p>
+          <label className="mt-3 block text-sm">
+            <span className="text-ink-500">Show all amounts in</span>
+            <select
+              value={currency.code}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-ink-300/70 bg-white px-3 py-2 text-sm focus:border-accent dark:bg-ink-900/60"
+            >
+              {Object.values(CURRENCIES).map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.symbol} {c.code} — {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="mt-2 text-xs text-ink-500">
+            {rateNote ??
+              'The tariff is written in taka, so taka is what a fresh visit shows. Any other currency is converted for display only, at a stated rate.'}
+          </p>
+        </div>
+      )}
     </div>
   )
 }
-
-/** Says the rate whenever figures are not in taka. An unstated rate is uncheckable. */
-function RateNote() {
-  const { rateNote } = useDisplay()
-  if (!rateNote) return null
-  return (
-    <p className="mx-auto w-full max-w-5xl px-4 pb-1 text-xs text-sand sm:px-6">{rateNote}</p>
-  )
-}
-
 
 /**
  * Whose meter is on screen, and how to change it.
@@ -235,25 +273,19 @@ function Layout() {
   // and `reset` forgets it and returns to the published sample.
   const { kase, load, reset, isSeed, error, setError } = useCase()
   const [setup, setSetup] = useState(false)
+  const [menu, setMenu] = useState(false)
+  const toast = useToast()
   // The step lives in the address bar, so a link points at a step, the browser's
   // Back button walks them, and a refresh stays where the reader was.
   const [step, setStepState] = useState(() => {
     const fromHash = window.location.hash.replace('#', '')
     return STEPS.some((s) => s.id === fromHash) ? fromHash : 'overview'
   })
-  // The phone's step list is a disclosure, not a permanent block. Closing it on
-  // every move means a step change never leaves the menu sitting open over the
-  // content it just navigated to.
-  const [stepMenu, setStepMenu] = useState(false)
   const setStep = (id) => {
     setStepState(id)
-    setStepMenu(false)
     window.history.replaceState(null, '', `#${id}`)
     window.scrollTo({ top: 0, behavior: 'auto' })
   }
-  const stepIndex = STEPS.findIndex((s) => s.id === step)
-  const stepPosition = stepIndex < 0 ? 1 : stepIndex + 1
-  const currentStep = STEPS[stepIndex] ?? STEPS[0]
   useEffect(() => {
     const onHash = () => {
       const id = window.location.hash.replace('#', '')
@@ -277,6 +309,15 @@ function Layout() {
           instead, and the footer carries the same section list. */}
       <header className="top-0 z-20 border-b border-ink-700 bg-ink-700 text-ink-50 sm:sticky">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap sm:px-6">
+          <button
+            type="button"
+            onClick={() => setMenu(true)}
+            aria-label="Open the menu"
+            className="-ml-1 flex size-10 shrink-0 items-center justify-center rounded-xl text-ink-50 hover:bg-white/10 lg:hidden"
+          >
+            <Menu className="size-5" aria-hidden="true" />
+          </button>
+
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold tracking-tight sm:text-base">Recharge Advisor</p>
             {/* Truncated to "Prepaid meter · r…" on a phone, which says less
@@ -287,6 +328,7 @@ function Layout() {
                 : 'Your household · remembered on this device'}
             </p>
           </div>
+          <HeaderTools />
           {/* Was `hidden sm:block`. Every case now goes through `load()`, which
               writes to localStorage, so a reload no longer returns to the sample
               — this button is the only way back. Hiding it below `sm` left a
@@ -312,27 +354,25 @@ function Layout() {
               phone could not load PUB-02 to see the habits differ. One instance
               still: it drops to its own full-width row below `sm` and sits inline
               from `sm` up, so there is no duplicate control to tab through. */}
-          {/* The two "what am I looking at, and how is it shown" controls sit
-              together on their own row, rather than the currency select wedging
-              itself between the brand and the buttons. The top row is then the
-              name of the thing and the two actions, which is what a first glance
-              should have to take in. */}
           {kase && (
-            <div className="order-last flex w-full shrink-0 items-center gap-2 sm:order-none sm:w-auto">
-              <div className="min-w-0 flex-1 sm:w-56 sm:flex-none">
-                <CasePicker
-                  current={kase.case_id}
-                  onLoad={load}
-                  onError={(m) => setError?.(m)}
-                />
-              </div>
-              <DisplayControls />
+            <div className="order-last w-full shrink-0 sm:order-none sm:w-56">
+              <CasePicker
+                current={kase.case_id}
+                onLoad={(k) => {
+                  load(k)
+                  toast(`Loaded ${k.case_id} — ${k.days.length} days of readings.`, 'info')
+                }}
+                onError={(m) => setError?.(m)}
+              />
             </div>
           )}
         </div>
 
-        <RateNote />
       </header>
+
+      <Drawer open={menu} onClose={() => setMenu(false)} title="Recharge Advisor">
+        <Sidebar active={step} onSelect={setStep} onNavigate={() => setMenu(false)} />
+      </Drawer>
 
       <div className="mx-auto flex w-full max-w-6xl gap-8 px-4 pb-20 pt-6 sm:px-6">
         {/* The sidebar is the map of the tool. On a phone it becomes the step
@@ -370,6 +410,7 @@ function Layout() {
                     onLoad={(k) => {
                       load(k)
                       setSetup(false)
+                      toast(`Your meter is set up — ${k.days.length} days rebuilt.`)
                     }}
                   />
                 </Suspense>
@@ -383,48 +424,6 @@ function Layout() {
                   <span className="flex-1">{error}</span>
                 </p>
               )}
-
-              {/* The step list on a phone.
-                  It used to render all seven rows above the content on every
-                  step — roughly 300px of navigation before the first figure, on
-                  a screen with about 600px to spend, repeated on every step. The
-                  reader already knows where they are; what they need is a way
-                  out, and `StepFooter` gives them Back and Next at the bottom.
-                  So this collapses to one row that names the current step and
-                  opens the full list on demand. */}
-              <div className="lg:hidden">
-                <button
-                  type="button"
-                  aria-expanded={stepMenu}
-                  aria-controls="step-menu"
-                  onClick={() => setStepMenu((v) => !v)}
-                  className="flex min-h-11 w-full items-center justify-between gap-3 rounded-card border border-ink-300/60 bg-white px-4 py-2 text-left dark:bg-ink-900/40"
-                >
-                  <span className="min-w-0">
-                    <span className="block text-xs text-ink-500">
-                      Step {stepPosition} of {STEPS.length}
-                    </span>
-                    <span className="block truncate text-sm font-medium">{currentStep?.label}</span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-2 text-xs text-ink-500">
-                    {stepMenu ? 'Close' : 'All steps'}
-                    <ChevronDown
-                      className={`size-4 transition-transform ${stepMenu ? 'rotate-180' : ''}`}
-                      aria-hidden="true"
-                    />
-                  </span>
-                </button>
-                {stepMenu && (
-                  <Sidebar
-                    id="step-menu"
-                    active={step}
-                    onSelect={setStep}
-                    onNavigate={() => setStepMenu(false)}
-                    showProgress={false}
-                    className="mt-2 rounded-card border border-ink-300/60 bg-white p-3 dark:bg-ink-900/40"
-                  />
-                )}
-              </div>
 
               <StepHeader step={step} />
 
@@ -539,7 +538,9 @@ export default function App() {
   return (
     <StoreProvider>
       <DisplayProvider>
-        <Layout />
+        <ToastProvider>
+          <Layout />
+        </ToastProvider>
       </DisplayProvider>
     </StoreProvider>
   )
