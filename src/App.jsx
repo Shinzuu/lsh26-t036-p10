@@ -7,7 +7,7 @@
  * statement finds each without being told where to look, and a family reading
  * it gets the answer before the working.
  */
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, ChevronDown, HelpCircle, Menu, Settings2 } from 'lucide-react'
 import Sidebar, { STEPS } from './features/Sidebar.jsx'
 import Drawer from './features/ui/Drawer.jsx'
@@ -64,6 +64,16 @@ function PanelSkeleton({ lines = 4 }) {
 function HeaderTools() {
   const { currency, setCurrency, rateNote } = useDisplay()
   const [open, setOpen] = useState(false)
+  const panelRef = useRef(null)
+  const buttonRef = useRef(null)
+
+  // Focus follows the popover: into its first control on open, back to the
+  // button that opened it on close — otherwise a keyboard user is left behind
+  // the panel they just opened.
+  useEffect(() => {
+    if (open) panelRef.current?.querySelector('select')?.focus()
+    else if (document.activeElement === document.body) buttonRef.current?.focus()
+  }, [open])
 
   // Close on Escape or a click anywhere else, the way a menu is expected to.
   useEffect(() => {
@@ -86,17 +96,21 @@ function HeaderTools() {
         side="bottom"
         label="Every figure is rebuilt from the household's own readings using the published slab tariff. Nothing is estimated unless the screen says so."
       >
-        <span className="flex size-10 items-center justify-center rounded-xl text-ink-300 hover:bg-white/10 hover:text-white">
+        <button
+          type="button"
+          className="flex size-10 items-center justify-center rounded-xl text-ink-300 hover:bg-white/10 hover:text-white"
+        >
           <HelpCircle className="size-5" aria-hidden="true" />
           <span className="sr-only">How these figures are produced</span>
-        </span>
+        </button>
       </Tooltip>
 
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-haspopup="true"
+        aria-haspopup="dialog"
         className={`flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-sm ${
           open ? 'bg-white/15 text-white' : 'text-ink-300 hover:bg-white/10 hover:text-white'
         }`}
@@ -107,7 +121,12 @@ function HeaderTools() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-40 w-72 rounded-card border border-ink-300/60 bg-white p-4 text-ink-900 shadow-xl dark:bg-ink-900 dark:text-ink-50">
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-label="Display settings"
+          className="absolute right-0 top-12 z-40 w-72 rounded-card border border-ink-300/60 bg-white p-4 text-ink-900 shadow-xl dark:bg-ink-900 dark:text-ink-50"
+        >
           <p className="text-sm font-semibold tracking-tight">Display</p>
           <label className="mt-3 block text-sm">
             <span className="text-ink-500">Show all amounts in</span>
@@ -268,12 +287,35 @@ function NextSteps({ onSelect }) {
   )
 }
 
+/** Printed pages need the collapsed explanations open; the screen keeps them shut. */
+function useOpenDetailsForPrint() {
+  useEffect(() => {
+    const opened = []
+    const before = () => {
+      document.querySelectorAll('details:not([open])').forEach((d) => {
+        d.setAttribute('open', '')
+        opened.push(d)
+      })
+    }
+    const after = () => {
+      opened.splice(0).forEach((d) => d.removeAttribute('open'))
+    }
+    window.addEventListener('beforeprint', before)
+    window.addEventListener('afterprint', after)
+    return () => {
+      window.removeEventListener('beforeprint', before)
+      window.removeEventListener('afterprint', after)
+    }
+  }, [])
+}
+
 function Layout() {
   // The store owns remembering: `isSeed` is false once anything else is loaded,
   // and `reset` forgets it and returns to the published sample.
   const { kase, load, reset, isSeed, error, setError } = useCase()
   const [setup, setSetup] = useState(false)
   const [menu, setMenu] = useState(false)
+  useOpenDetailsForPrint()
   const toast = useToast()
   // The step lives in the address bar, so a link points at a step, the browser's
   // Back button walks them, and a refresh stays where the reader was.
@@ -282,17 +324,25 @@ function Layout() {
     return STEPS.some((s) => s.id === fromHash) ? fromHash : 'overview'
   })
   const setStep = (id) => {
+    // pushState, not replaceState: each step is a history entry, so the
+    // browser's Back button walks the steps instead of leaving the site.
+    // The guard reads the address bar, not React state — a side effect inside
+    // a state updater runs twice under StrictMode and pushed double entries.
+    if (window.location.hash !== `#${id}`) window.history.pushState(null, '', `#${id}`)
     setStepState(id)
-    window.history.replaceState(null, '', `#${id}`)
     window.scrollTo({ top: 0, behavior: 'auto' })
   }
   useEffect(() => {
     const onHash = () => {
       const id = window.location.hash.replace('#', '')
-      if (STEPS.some((s) => s.id === id)) setStepState(id)
+      setStepState(STEPS.some((s) => s.id === id) ? id : 'overview')
     }
+    window.addEventListener('popstate', onHash)
     window.addEventListener('hashchange', onHash)
-    return () => window.removeEventListener('hashchange', onHash)
+    return () => {
+      window.removeEventListener('popstate', onHash)
+      window.removeEventListener('hashchange', onHash)
+    }
   }, [])
   const empty = !kase || !kase.days?.length
   // `isSeed` is identity with PUB-01, which is the right test for "offer to go
@@ -410,6 +460,7 @@ function Layout() {
                     onLoad={(k) => {
                       load(k)
                       setSetup(false)
+                      setStep('overview')
                       toast(`Your meter is set up — ${k.days.length} days rebuilt.`)
                     }}
                   />

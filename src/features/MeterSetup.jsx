@@ -105,6 +105,15 @@ export default function MeterSetup({ onLoad, onCancel }) {
     if (targetDate <= asOf) return setProblem('The date you want to last until must be after today.')
     const badRecharge = recharges.find((r) => Number(r.amount) < 0)
     if (badRecharge) return setProblem('A recharge amount cannot be negative.')
+    // A recharge after the last reading has no day to land on, so it would be
+    // excluded from the rebuild. Better to say so here, in the form, than as a
+    // warning three steps later.
+    const lateRecharge = recharges.find((r) => r.date && Number(r.amount) > 0 && r.date > asOf)
+    if (lateRecharge) {
+      return setProblem(
+        `A recharge on ${lateRecharge.date} is after your last reading (${asOf}) — the readings would not cover it. Change one of the dates.`,
+      )
+    }
     try {
       onLoad(buildCase({ name, asOf, months: Number(months), dailyUnits: Number(dailyUnits), openingBalance, recharges, targetDate }))
     } catch (err) {
