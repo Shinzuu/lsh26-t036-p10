@@ -96,7 +96,12 @@ body {
   :root {
     --color-ink-500: #a5a2b0;   /* 5.1:1 */
     --color-accent: #a0a4d0;    /* 5.3:1 */
-    --color-accent-soft: #3c3950;
+    /* Tinted surfaces carry ink-500 secondary text on top of them (the month
+       chips, the recharge-today card). At #3c3950 that pair measured 4.43:1 —
+       under AA by a hair, on the very lines that state the answer. Darkening
+       the surface fixes the pair without touching the text colour, which is
+       shared with every untinted card. */
+    --color-accent-soft: #332f47;
     --color-sand-soft: #403a2b;
     --color-danger: #e08b82;    /* 5.0:1 */
     --color-ok: #c6bc8e;        /* 6.7:1 */
@@ -111,4 +116,33 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* -----------------------------------------------------------------------------
+   Jump-link feedback.
+
+   Four of the six nav links point at sections that sit two-to-a-row, so
+   "Questions" and "Habits" — and "Bill" and "Check" — legitimately scroll to the
+   same y position. Without a cue the second link of each pair reads as a dead
+   control. Tinting the section that was actually asked for says which one
+   arrived, and fades so it never becomes permanent chrome.
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  :target {
+    animation: jump-target 1.6s ease-out 1;
+  }
+}
+
+@keyframes jump-target {
+  0%,
+  40% {
+    background-color: color-mix(in oklab, var(--color-accent) 12%, transparent);
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-accent) 12%, transparent);
+    border-radius: var(--radius-card);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 6px transparent;
+    border-radius: var(--radius-card);
+  }
 }

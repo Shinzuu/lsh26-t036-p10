@@ -12,9 +12,13 @@
  * the screen looks the same.
  */
 import { useState } from 'react'
-import { FileUp, ClipboardPaste } from 'lucide-react'
-import { SEED, parseCases, monthSummary, dateRange } from '../lib/dataset.js'
+import { FileUp, ClipboardPaste, AlertTriangle, X } from 'lucide-react'
+import { SEED, parseAny, monthSummary, dateRange } from '../lib/dataset.js'
 import { simulate } from '../lib/tariff.js'
+
+/** A CSV has no case id of its own, so the file name becomes the label. */
+const caseIdFrom = (name) =>
+  name ? name.replace(/\.(csv|json|txt)$/i, '').slice(0, 40) || 'My meter' : 'My meter'
 
 const MONTH_LABEL = { month: 'short', year: 'numeric', timeZone: 'UTC' }
 const formatMonth = (m) => new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-GB', MONTH_LABEL)
@@ -55,13 +59,15 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
     onLoad?.(next)
   }
 
-  function loadText(text) {
+  function loadText(text, name) {
     setBusy(true)
     try {
-      accept(parseCases(text))
+      // One control, both formats: a spreadsheet export is what a household
+      // actually has, and a JSON fixture is what a judge actually has.
+      accept(parseAny(text, { caseId: caseIdFrom(name) }))
       setPaste('')
     } catch (e) {
-      // Naming the field beats a stack trace: the person pasting can fix it.
+      // Naming the row or field beats a stack trace: the person can fix it.
       setLocalError(e.message)
     } finally {
       setBusy(false)
@@ -73,7 +79,7 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
     if (!file) return
     setBusy(true)
     try {
-      accept(parseCases(await file.text()))
+      accept(parseAny(await file.text(), { caseId: caseIdFrom(file.name) }))
     } catch (e) {
       setLocalError(e.message)
     } finally {
@@ -177,12 +183,13 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
         {/* Load another household: paste or file, both through the same parser. */}
         <details className="mt-4">
           <summary className="cursor-pointer text-sm font-medium text-accent">
-            Paste or upload your own data
+            Upload a CSV, or paste your own data
           </summary>
           <div className="mt-3 space-y-3">
             <label className="block text-sm" htmlFor="case-paste">
-              The 25 published households are in the selector at the top of the page. To use
-              your own, paste a case here or upload a JSON file in the same shape.
+              Paste a CSV with <code className="font-mono text-xs">date,units</code> columns —
+              add a <code className="font-mono text-xs">recharge</code> column for money in —
+              or a case in the published JSON shape. Files work too.
             </label>
             <textarea
               id="case-paste"
@@ -190,7 +197,7 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
                  placeholder:text-ink-500 focus:border-accent dark:bg-ink-900/40"
               value={paste}
               onChange={(e) => setPaste(e.target.value)}
-              placeholder='{ "case_id": "PUB-02", "opening_balance_bdt": "…", "days": [ … ] }'
+              placeholder={'date,units,recharge\n2026-01-01,12,\n2026-01-02,14,500.00'}
               spellCheck="false"
             />
             <div className="flex flex-wrap items-center gap-3">
@@ -206,15 +213,15 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
               <label className="text-sm">
                 <span className="mr-2 inline-flex items-center gap-1.5 text-ink-500">
                   <FileUp className="size-4" aria-hidden="true" />
-                  or a JSON file
+                  or a CSV or JSON file
                 </span>
                 <input
                   type="file"
-                  accept="application/json,.json"
+                  accept=".csv,text/csv,application/json,.json"
                   className="text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-accent-soft
                      file:px-3 file:py-1.5 file:text-sm file:text-accent"
                   onChange={loadFile}
-                  aria-label="Load a household case from a JSON file"
+                  aria-label="Load a household from a CSV or JSON file"
                 />
               </label>
             </div>
@@ -249,15 +256,24 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
         )}
 
         {error && (
-          <p
+          <div
             role="alert"
-            className="mt-3 flex items-start gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger"
+            className="mt-3 flex items-start gap-3 rounded-card border border-danger/30 bg-danger/10 px-4 py-3"
           >
-            <span className="flex-1">{error}</span>
-            <button type="button" className="underline" onClick={() => setLocalError(null)}>
-              dismiss
+            <AlertTriangle className="mt-0.5 size-5 shrink-0 text-danger" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-danger">That file could not be read</p>
+              <p className="mt-0.5 text-sm text-ink-700 dark:text-ink-300">{error}</p>
+            </div>
+            <button
+              type="button"
+              className="shrink-0 rounded-lg px-2 py-1 text-sm text-ink-500 hover:text-ink-900 dark:hover:text-ink-50"
+              onClick={() => setLocalError(null)}
+              aria-label="Dismiss this message"
+            >
+              <X className="size-4" aria-hidden="true" />
             </button>
-          </p>
+          </div>
         )}
       </div>
     </section>

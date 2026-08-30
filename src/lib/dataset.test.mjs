@@ -7,9 +7,24 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { SEED, parseCase, parseCases, monthSummary, daysInMonth, dateRange } from './dataset.js'
+import {
+  SEED,
+  parseCase,
+  parseCases,
+  parseCsv,
+  parseAny,
+  looksLikeCsv,
+  monthSummary,
+  daysInMonth,
+  dateRange,
+} from './dataset.js'
 
 const clone = (o) => JSON.parse(JSON.stringify(o))
+
+/** A spreadsheet export: one row per day, recharges in the same file. */
+function csvOf(days, { header = 'date,units,recharge' } = {}) {
+  return [header, ...days].join('\n')
+}
 
 test('SEED is fixture case PUB-01, unmodified', () => {
   assert.equal(SEED.case_id, 'PUB-01')
@@ -110,7 +125,11 @@ test('a bad recharge amount names its index', () => {
 })
 
 test('malformed JSON produces a readable message, not a stack trace', () => {
-  assert.throws(() => parseCase('{ not json'), /not valid JSON/)
+  // The message names the two shapes the box accepts rather than quoting the
+  // JSON parser, whose "Unexpected token 'h' at position 4" helps nobody who
+  // did not mean to write JSON in the first place.
+  assert.throws(() => parseCase('{ not json'), /does not look like a CSV or a saved case/)
+  assert.throws(() => parseCase('{ not json'), (e) => !/Unexpected token/.test(e.message))
   assert.throws(() => parseCase('   '), /Nothing to load/)
 })
 
@@ -181,4 +200,51 @@ test('a month bill sums the simulation rows it covers', async () => {
   assert.equal(vat, 19263)
   assert.equal(fixed, DEMAND_CHARGE_PAISA + METER_RENT_PAISA)
   assert.equal(energy + vat + fixed, 412728)
+})
+
+// --- CSV upload, added in the polish pass -----------------------------------
+
+test('a two-column CSV becomes a valid case', () => {
+  const kase = parseCsv(
+    csvOf(['2026-01-01,10,', '2026-01-02,12,', '2026-01-03,8,500.00'], { header: 'date,units,recharge' }),
+    { caseId: 'Mirpur flat' },
+  )
+  assert.equal(kase.case_id, 'Mirpur flat')
+  assert.equal(kase.days.length, 3)
+  assert.deepEqual(kase.days[0], { date: '2026-01-01', units: 10 })
+  assert.equal(kase.recharges.length, 1)
+  assert.deepEqual(kase.recharges[0], { date: '2026-01-03', amount_bdt: '500.00' })
+  assert.equal(kase.today, '2026-01-03')
+  // The case it produces must survive the same validator a JSON case does.
+  assert.doesNotThrow(() => parseCase(kase))
+})
+
+test('CSV without a recharge column still works — a household may have none', () => {
+  const kase = parseCsv('date,units\n2026-03-01,9\n2026-03-02,11')
+  assert.equal(kase.days.length, 2)
+  assert.deepEqual(kase.recharges, [])
+  assert.equal(kase.usual_daily_units, 10) // mean of 9 and 11
+})
+
+test('CSV headers are matched loosely, and day-first dates are understood', () => {
+  const kase = parseCsv('Date , Units , Recharge Amount\n01/02/2026, 7 , \n02/02/2026, 9 , 300')
+  assert.equal(kase.days[0].date, '2026-02-01')
+  assert.equal(kase.days[1].date, '2026-02-02')
+  assert.equal(kase.recharges[0].amount_bdt, '300.00')
+})
+
+test('a CSV error names the row, not a character offset', () => {
+  assert.throws(() => parseCsv('date,units\nnotadate,5'), /Row 2/)
+  assert.throws(() => parseCsv('date,units\n2026-01-01,abc'), /Row 2/)
+  assert.throws(() => parseCsv('units\n5'), /needs a "date" column/)
+  assert.throws(() => parseCsv('date\n2026-01-01'), /needs a "units" column/)
+  assert.throws(() => parseCsv(''), /empty/)
+})
+
+test('looksLikeCsv tells the two formats apart, and parseAny routes on it', () => {
+  assert.equal(looksLikeCsv('date,units\n2026-01-01,5'), true)
+  assert.equal(looksLikeCsv('{ "case_id": "PUB-01" }'), false)
+  assert.equal(looksLikeCsv('[{"case_id":"x"}]'), false)
+  assert.equal(parseAny('date,units\n2026-01-01,5')[0].days.length, 1)
+  assert.equal(parseAny(JSON.stringify(SEED))[0].case_id, 'PUB-01')
 })

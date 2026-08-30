@@ -20,6 +20,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCase, useDay } from '../lib/store.js'
 import { linePath, linearScale, niceTicks } from '../lib/chart-scale.js'
 import { formatBDT, monthOf, MONTHLY_FIXED_PAISA, SLABS } from '../lib/tariff.js'
+import Explainer from './Explainer.jsx'
 
 /**
  * Two viewBoxes rather than one stretched box.
@@ -286,10 +287,13 @@ export default function BalanceChart() {
         </p>
       </div>
 
-      <p className="mt-1 text-sm text-ink-500">
-        Each day charged at the slab the calendar month has reached. Demand charge and meter rent
-        taken once a month, on that month&rsquo;s first recharge. VAT is 5% of energy only.
-      </p>
+      {/* The tariff is restated in the footer and in the day detail, so the
+          panel head only needs to say what the line is. */}
+      <Explainer label="How each day is charged">
+        Each day is charged at the slab the calendar month has reached. The demand charge and meter
+        rent are taken once a month, on that month&rsquo;s first recharge. VAT is 5% of the energy
+        amount only, never of the fixed charges.
+      </Explainer>
 
       {/* The chart. role=img with a written description keeps it meaningful to a
           screen reader; the interactive detail below carries the same numbers. */}
