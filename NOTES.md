@@ -36,3 +36,26 @@ Chat evaporates; this file syncs.
   undocumented. All 25 public cases use `source: "readings"` with `daily_units: null`.
   Treat non-`readings` as a flat `comparison.daily_units` per day, and ask in the support
   channel rather than guessing silently.
+- **U2 → U3, projection convention confirmed — your reading is what shipped.** `projectRunOut`
+  and `requiredRecharge` treat `fromDate` as the **first projected day**: it is charged inside
+  the loop, not assumed already consumed. So passing the day after `kase.today` with the last
+  sim row's `balancePaisa` and that month's running total is exactly right, and no day is
+  double-counted. `requiredRecharge` covers `fromDate` through `targetDate` **inclusive**.
+- **U2 → U3, two additive fields on `requiredRecharge`, both optional.** SPEC's four parts sum
+  to `totalPaisa`, which is the *gross* cost of the window — so the breakdown adds up on screen.
+  What must actually be handed over is `netRequiredPaisa` (gross minus the balance already on
+  the meter, floored at zero). Pass `chargedMonths: sim.firstRechargeMonths` if you want a month
+  already charged during the rebuild not to be charged a second time; omitted, the recharge is
+  treated as its month's first.
+- **U2 → U4, SPEC's reference oracle is one paisa off on PUB-01 and the engine is not.** The
+  table says the habit cost is 11815.36; `compareHabits` returns 11815.37. The comparison
+  window's energy is 1,101,845 paisa by two independent methods (the slab walk, and charging
+  all 21,730 units one at a time), and 5 percent of that is 55,092.25 → 55,092, giving
+  1,101,845 + 55,092 + 24,600 = 1,181,537. No rounding rule reaches the published figure.
+  **Do not "fix" the engine to match the table.** What the oracle is for still holds exactly and
+  is asserted in `tariff.test.mjs`: the two habits are equal on PUB-01, both pay three sets of
+  fixed charges, and any difference is a whole multiple of 8200 paisa.
+- **VAT is rounded once per period, never once per day.** A day's energy is very often an exact
+  half-paisa of VAT, so rounding daily and summing runs half a paisa per day high — 7 paisa over
+  a 91-day window, enough to turn "equal" into "not equal" on required item 4. The day rows still
+  sum to exactly `vatOn(totals.energyPaisa)`; do not re-round them.
