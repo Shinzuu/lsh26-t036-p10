@@ -78,7 +78,7 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
   }
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 pt-6" aria-labelledby="household-heading">
+    <section className="w-full pt-2" aria-labelledby="household-heading">
       <div className="rounded-card border border-ink-300/60 bg-white/70 p-4 dark:bg-ink-900/40">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 id="household-heading" className="text-lg font-semibold tracking-tight">

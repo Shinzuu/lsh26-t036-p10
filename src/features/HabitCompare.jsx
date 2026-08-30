@@ -240,7 +240,7 @@ export default function HabitCompare({ kase: kaseProp }) {
 /** Shared shell so every state keeps the same width and padding. */
 function Frame({ children }) {
   return (
-    <section aria-labelledby="habit-compare-heading" className="mx-auto w-full max-w-3xl px-4 pb-12 pt-8">
+    <section aria-labelledby="habit-compare-heading" className="w-full">
       <h2 id="habit-compare-heading" className="sr-only">
         Recharge habit comparison
       </h2>

@@ -138,7 +138,7 @@ export default function Questions() {
 
   if (!kase || !sim) {
     return (
-      <section className="mx-auto w-full max-w-xl px-4 py-8" aria-busy="true">
+      <section className="w-full" aria-busy="true">
         <h2 className="text-lg font-semibold">The family's two questions</h2>
         <div className="mt-4 space-y-2">
           <div className="h-20 animate-pulse rounded-card bg-ink-100 dark:bg-ink-700/30" />
@@ -150,7 +150,7 @@ export default function Questions() {
 
   if (!start) {
     return (
-      <section className="mx-auto w-full max-w-xl px-4 py-8">
+      <section className="w-full">
         <h2 className="text-lg font-semibold">The family's two questions</h2>
         <p className="mt-3 rounded-card border border-dashed border-ink-300/70 px-6 py-8 text-center text-ink-500">
           No daily readings in this household yet, so there is no balance to project from.
@@ -167,7 +167,7 @@ export default function Questions() {
   const days = target ? daysBetween(start.fromDate, target) + 1 : 0
 
   return (
-    <section className="mx-auto w-full max-w-xl px-4 py-8">
+    <section className="w-full">
       <h2 className="text-lg font-semibold">The family's two questions</h2>
 
       {/* ---------------- Question one: when does the balance run out? -------- */}
