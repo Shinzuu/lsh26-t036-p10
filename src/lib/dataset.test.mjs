@@ -113,3 +113,43 @@ test('malformed JSON produces a readable message, not a stack trace', () => {
   assert.throws(() => parseCase('{ not json'), /not valid JSON/)
   assert.throws(() => parseCase('   '), /Nothing to load/)
 })
+
+// --- from Dip's U4 test pass, 19:42 -----------------------------------------
+
+test('a recharge cannot be negative', () => {
+  const kase = clone(SEED)
+  kase.recharges[0].amount_bdt = '-500.00'
+  assert.throws(() => parseCase(kase), /recharges\[0\]\.amount_bdt/)
+  assert.throws(() => parseCase(kase), /cannot be negative/)
+})
+
+test('an empty array says what it is, not what it is not', () => {
+  assert.throws(() => parseCase('[]'), /empty list/)
+  assert.throws(() => parseCase('{"cases":[]}'), /"cases" list, but it is empty/)
+})
+
+test('one month of readings is neither lightest nor heaviest', () => {
+  const kase = clone(SEED)
+  kase.days = kase.days.filter((d) => d.date.startsWith('2026-01'))
+  const s = monthSummary(kase)
+  assert.deepEqual(s.lightestMonths, [])
+  assert.deepEqual(s.heaviestMonths, [])
+  assert.equal(s.lightest, null)
+})
+
+test('months that tie are all labelled, not silently dropped', () => {
+  const kase = clone(SEED)
+  const jan = kase.days.filter((d) => d.date.startsWith('2026-01')).reduce((a, d) => a + d.units, 0)
+  for (const d of kase.days) if (d.date.startsWith('2026-02')) d.units = 0
+  kase.days.find((d) => d.date === '2026-02-01').units = jan
+  assert.deepEqual(monthSummary(kase).lightestMonths, ['2026-01', '2026-02'])
+})
+
+test('the last seven days of a 29-day February are the 23rd to the 29th', () => {
+  const kase = clone(SEED)
+  kase.days = [{ date: '2024-02-01', units: 5 }]
+  kase.recharges = [{ date: '2024-02-23', amount_bdt: '100.00' }]
+  assert.equal(monthSummary(kase).lateLarge, '2024-02')
+  kase.recharges = [{ date: '2024-02-22', amount_bdt: '100.00' }]
+  assert.equal(monthSummary(kase).lateLarge, null)
+})
