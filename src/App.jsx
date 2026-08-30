@@ -8,8 +8,8 @@
  * it gets the answer before the working.
  */
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { ChevronDown } from 'lucide-react'
-import { useReveal } from './lib/useReveal.js'
+import { ArrowLeft, ArrowRight, ChevronDown } from 'lucide-react'
+import Sidebar, { STEPS } from './features/Sidebar.jsx'
 import { DisplayProvider, useDisplay, CURRENCIES } from './lib/display.jsx'
 import { StoreProvider, useCase } from './lib/store.js'
 import { SEED } from './lib/dataset.js'
@@ -27,16 +27,6 @@ const MeterSetup = lazy(() => import('./features/MeterSetup.jsx'))
 const MonthBill = lazy(() => import('./features/MonthBill.jsx'))
 const MeterCheck = lazy(() => import('./features/MeterCheck.jsx'))
 
-const SECTION_IDS = ['household', 'balance', 'questions', 'check', 'habits', 'bill']
-
-const SECTIONS = [
-  { id: 'household', label: 'Household' },
-  { id: 'balance', label: 'Balance' },
-  { id: 'questions', label: 'Questions' },
-  { id: 'habits', label: 'Habits' },
-  { id: 'check', label: 'Check' },
-  { id: 'bill', label: 'Bill' },
-]
 
 /**
  * An eyebrow and a hairline. Deliberately not a heading: each panel already owns
@@ -60,72 +50,17 @@ function PanelSkeleton({ lines = 4 }) {
   )
 }
 
-/** A section that fades in the first time it is scrolled to, head and all. */
-function Section({ id, item, title, note, children }) {
-  const { ref, shown } = useReveal()
-  return (
-    <section id={id} ref={ref} className={`scroll-mt-32 reveal ${shown ? 'reveal-in' : ''}`}>
-      <SectionHead item={item} title={title} note={note} />
-      {children}
-    </section>
-  )
-}
-
-function SectionHead({ item, title, note }) {
-  return (
-    <div className="mb-3">
-      <div className="flex min-h-7 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <p className="flex items-baseline gap-2">
-          <span
-            className={`rounded px-1.5 py-0.5 text-[11px] font-semibold tracking-wide ${
-              item ? 'bg-accent-soft text-accent' : 'bg-ink-100 text-ink-500 dark:bg-ink-700/40'
-            }`}
-          >
-            {item ?? 'more'}
-          </span>
-          <span className="text-sm font-semibold tracking-tight">{title}</span>
-        </p>
-        {note && <p className="text-xs text-ink-500">{note}</p>}
-      </div>
-      <div className="rule mt-2" />
-    </div>
-  )
-}
-
-/** Marks the section currently in view, so the jump links say where you are. */
-function useScrollSpy(ids) {
-  const [active, setActive] = useState(ids[0])
-  useEffect(() => {
-    const seen = new Map()
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) seen.set(e.target.id, e.intersectionRatio)
-        const best = [...seen.entries()]
-          .filter(([, r]) => r > 0)
-          .sort((a, b) => b[1] - a[1])[0]
-        if (best) setActive(best[0])
-      },
-      { rootMargin: '-30% 0px -55% 0px', threshold: [0, 0.25, 0.5, 1] },
-    )
-    for (const id of ids) {
-      const el = document.getElementById(id)
-      if (el) io.observe(el)
-    }
-    return () => io.disconnect()
-  }, [ids])
-  return active
-}
 
 /**
  * Display preferences. Currency and numerals only — nothing here touches the
  * arithmetic, and taka is always what a fresh load shows.
  */
 function DisplayControls() {
-  const { currency, setCurrency, bengali, setBengali } = useDisplay()
+  const { currency, setCurrency } = useDisplay()
   return (
     <div className="flex items-center gap-2">
-      <label className="relative">
-        <span className="sr-only">Show amounts in</span>
+      <label className="relative flex items-center gap-2">
+        <span className="hidden shrink-0 text-xs text-ink-300 lg:block">Currency</span>
         <select
           value={currency.code}
           onChange={(e) => setCurrency(e.target.value)}
@@ -140,17 +75,6 @@ function DisplayControls() {
         <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-ink-300" aria-hidden="true" />
       </label>
 
-      <button
-        type="button"
-        onClick={() => setBengali((v) => !v)}
-        aria-pressed={bengali}
-        title="Show figures in Bengali numerals"
-        className={`rounded-xl border px-2.5 py-2 text-sm ${
-          bengali ? 'border-sand bg-sand text-ink-900' : 'border-white/25 text-ink-50 hover:bg-white/10'
-        }`}
-      >
-        ১২৩
-      </button>
     </div>
   )
 }
@@ -164,12 +88,166 @@ function RateNote() {
   )
 }
 
+
+/**
+ * Whose meter is on screen, and how to change it.
+ *
+ * Someone opening this for the first time sees numbers for a household they
+ * have never heard of. Unexplained, that reads as a broken demo. Said plainly,
+ * it reads as a worked example — and the two ways out of it are right there.
+ */
+function DataNotice({ kase, isPublished, onSetup, onStep }) {
+  return (
+    <section className="rounded-card border border-accent/30 bg-accent-soft/60 p-4">
+      <p className="text-sm">
+        {isPublished ? (
+          <>
+            You are looking at <strong className="font-semibold">{kase.case_id}</strong>, one of
+            25 sample households published with this problem — six months of real-shaped
+            readings and recharges, so every figure below has something to work on.
+          </>
+        ) : (
+          <>
+            You are looking at <strong className="font-semibold">{kase.case_id}</strong>, the
+            meter you set up. It is kept in this browser and nowhere else.
+          </>
+        )}
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onSetup}
+          className="rounded-xl bg-accent px-3 py-2 text-sm font-medium text-white"
+        >
+          Set up my own meter
+        </button>
+        <button
+          type="button"
+          onClick={() => onStep('household')}
+          className="rounded-xl border border-accent/40 px-3 py-2 text-sm font-medium text-accent"
+        >
+          Load a file, or pick another sample
+        </button>
+      </div>
+    </section>
+  )
+}
+
+/** The title of the step you are on, and what it is for. */
+function StepHeader({ step }) {
+  const s = STEPS.find((x) => x.id === step)
+  if (!s) return null
+  return (
+    <header>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        {s.item && (
+          <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-accent">
+            {s.item}
+          </span>
+        )}
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{s.label}</h1>
+      </div>
+      <p className="mt-1 text-ink-500">{s.blurb}</p>
+      <div className="rule mt-3" />
+    </header>
+  )
+}
+
+/** Walk forward and back without going to the sidebar for it. */
+function StepFooter({ step, onSelect }) {
+  const i = STEPS.findIndex((x) => x.id === step)
+  const prev = STEPS[i - 1]
+  const next = STEPS[i + 1]
+  return (
+    <nav aria-label="Move between steps" className="flex items-stretch justify-between gap-3 pt-2">
+      {prev ? (
+        <button
+          type="button"
+          onClick={() => onSelect(prev.id)}
+          className="group flex min-w-0 flex-1 items-center gap-2 rounded-card border border-ink-300/60 px-4 py-3 text-left hover:border-accent/50 sm:flex-none sm:min-w-56"
+        >
+          <ArrowLeft className="size-4 shrink-0 text-ink-500" aria-hidden="true" />
+          <span className="min-w-0">
+            <span className="block text-xs text-ink-500">Back</span>
+            <span className="block truncate text-sm font-medium">{prev.label}</span>
+          </span>
+        </button>
+      ) : (
+        <span />
+      )}
+      {next && (
+        <button
+          type="button"
+          onClick={() => onSelect(next.id)}
+          className="group flex min-w-0 flex-1 items-center justify-end gap-2 rounded-card bg-accent px-4 py-3 text-right text-white sm:flex-none sm:min-w-56"
+        >
+          <span className="min-w-0">
+            <span className="block text-xs text-white/80">Next</span>
+            <span className="block truncate text-sm font-medium">{next.label}</span>
+          </span>
+          <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+        </button>
+      )}
+    </nav>
+  )
+}
+
+/** On the overview, say what the tool will do rather than leaving them to guess. */
+function NextSteps({ onSelect }) {
+  return (
+    <section className="rounded-card border border-ink-300/60 bg-white p-5 dark:bg-ink-900/40">
+      <h2 className="text-base font-semibold tracking-tight">What this tool does next</h2>
+      <p className="mt-1 text-sm text-ink-500">
+        Four steps, in order. Each answers one question about this meter, and each shows the
+        working behind its answer.
+      </p>
+      <ol className="mt-4 space-y-2">
+        {STEPS.filter((s) => s.item).map((s) => (
+          <li key={s.id}>
+            <button
+              type="button"
+              onClick={() => onSelect(s.id)}
+              className="flex w-full items-start gap-3 rounded-xl border border-ink-300/50 px-3 py-2.5 text-left hover:border-accent/50 hover:bg-accent-soft/40"
+            >
+              <span className="mt-0.5 rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-semibold text-accent">
+                {s.item}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">{s.label}</span>
+                <span className="block text-xs text-ink-500">{s.blurb}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
 function Layout() {
   // The store owns remembering: `isSeed` is false once anything else is loaded,
   // and `reset` forgets it and returns to the published sample.
   const { kase, load, reset, isSeed, error, setError } = useCase()
   const [setup, setSetup] = useState(false)
-  const active = useScrollSpy(SECTION_IDS)
+  // The step lives in the address bar, so a link points at a step, the browser's
+  // Back button walks them, and a refresh stays where the reader was.
+  const [step, setStepState] = useState(() => {
+    const fromHash = window.location.hash.replace('#', '')
+    return STEPS.some((s) => s.id === fromHash) ? fromHash : 'overview'
+  })
+  const setStep = (id) => {
+    setStepState(id)
+    window.history.replaceState(null, '', `#${id}`)
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }
+  useEffect(() => {
+    const onHash = () => {
+      const id = window.location.hash.replace('#', '')
+      if (STEPS.some((s) => s.id === id)) setStepState(id)
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
   const empty = !kase || !kase.days?.length
   // `isSeed` is identity with PUB-01, which is the right test for "offer to go
   // back", but the wrong one for the subtitle: picking PUB-24 from the sample
@@ -186,9 +264,7 @@ function Layout() {
       <header className="top-0 z-20 border-b border-ink-700 bg-ink-700 text-ink-50 sm:sticky">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap sm:px-6">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold tracking-tight sm:text-base">
-              Recharge Advisor
-            </p>
+            <p className="text-sm font-semibold tracking-tight sm:text-base">Recharge Advisor</p>
             <p className="truncate text-xs text-ink-300">
               {isPublished
                 ? 'Prepaid meter · rebuilt on the published slab tariff'
@@ -233,156 +309,97 @@ function Layout() {
         </div>
 
         <RateNote />
-
-        {/* The picker is the only route to the other 24 published households, and
-            above it was desktop-only — on the phone a judge is told to use, PUB-01
-            was the only case reachable. It gets its own row below the brand rather
-            than a fourth control crammed into one line. */}
-        {kase && (
-          <div className="mx-auto flex w-full max-w-5xl items-center gap-2 px-4 pb-2 sm:hidden">
-            <div className="min-w-0 flex-1">
-              <CasePicker current={kase.case_id} onLoad={load} onError={(m) => setError?.(m)} />
-            </div>
-            {!isSeed && (
-              <button
-                type="button"
-                className="shrink-0 rounded-xl border border-white/25 px-3 py-2 text-sm text-ink-50"
-                onClick={reset}
-              >
-                Sample
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Six labels are about 430px of content; a 375px phone cannot show them.
-            Below `sm` this is a snap scroller with a fade at the right edge so it
-            reads as "there is more", rather than a silently clipped row. The
-            scrollbar is hidden because it sat on top of the links. From `sm` up
-            the whole row fits, so it wraps normally and the fade is gone.
-
-            Each link is 44px tall on touch; the old `px-2.5 py-1` gave a 26px
-            target, under every tap-size guideline. Compact again from `sm`. */}
-        <nav aria-label="Sections" className="relative mx-auto w-full max-w-5xl px-4 pb-2 sm:px-6">
-          <ul className="no-scrollbar -mx-1 flex snap-x gap-1 overflow-x-auto px-1 text-sm sm:mx-0 sm:flex-wrap sm:gap-1.5 sm:overflow-visible sm:px-0">
-            {SECTIONS.map((s) => (
-              <li key={s.id} className="snap-start">
-                <a
-                  href={`#${s.id}`}
-                  aria-current={active === s.id ? 'true' : undefined}
-                  className={`flex min-h-11 items-center whitespace-nowrap rounded-lg px-3 transition-colors sm:min-h-0 sm:px-2.5 sm:py-1 ${
-                    active === s.id
-                      ? 'bg-white/15 text-white'
-                      : 'text-ink-300 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  {s.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-ink-700 to-transparent sm:hidden"
-          />
-        </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl space-y-8 px-4 pb-20 pt-6 sm:px-6">
-        {empty ? (
-          <div className="rounded-card border border-dashed border-ink-300 p-8 text-center">
-            <p className="font-medium">Nothing to rebuild yet.</p>
-            <p className="mx-auto mt-1 max-w-md text-sm text-ink-500">
-              Load a household&rsquo;s daily readings and recharges and this page will rebuild
-              its meter balance day by day, say when the balance runs out, and compare two
-              recharge habits.
-            </p>
-            <button
-              type="button"
-              className="mt-4 rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white"
-              onClick={() => load(SEED)}
-            >
-              Load the sample household
-            </button>
+      <div className="mx-auto flex w-full max-w-6xl gap-8 px-4 pb-20 pt-6 sm:px-6">
+        {/* The sidebar is the map of the tool. On a phone it becomes the step
+            list at the top of the page instead, because a drawer that has to be
+            opened hides the one thing a first-time reader needs to see. */}
+        <aside className="hidden w-64 shrink-0 lg:block">
+          <div className="sticky top-24">
+            <Sidebar active={step} onSelect={setStep} />
           </div>
-        ) : (
-          <>
-            {setup && (
-              <MeterSetup
-                onCancel={() => setSetup(false)}
-                onLoad={(k) => {
-                  load(k)
-                  setSetup(false)
-                }}
-              />
-            )}
+        </aside>
 
-            <div className="space-y-4">
-              <div>
-                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                  Where the money on this meter actually goes
-                </h1>
-                <p className="mt-1 max-w-2xl text-ink-500">
-                  Electricity is priced in slabs that climb as the month goes on and reset on
-                  the 1st. This rebuilds the balance day by day on that tariff, so the next
-                  recharge is a number rather than a guess.
-                </p>
-              </div>
-              <Hero />
-            </div>
-
-            {error && (
-              <p
-                role="alert"
-                className="flex items-start gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger"
-              >
-                <span className="flex-1">{error}</span>
+        <main className="min-w-0 flex-1 space-y-6">
+          {empty ? (
+            <div className="rounded-card border border-dashed border-ink-300 p-8 text-center">
+              <p className="font-medium">Nothing to rebuild yet.</p>
+              <p className="mx-auto mt-1 max-w-md text-sm text-ink-500">
+                Load a household&rsquo;s daily readings and recharges and this page will rebuild
+                its meter balance day by day, say when the balance runs out, and compare two
+                recharge habits.
               </p>
-            )}
-
-            {/* Item 1 — the household's readings and recharges, and how a judge loads their own. */}
-            <Section id="household" item="R1" title="This household" note="six months of readings, and how to load your own">
-              <DataSource kase={kase} error={null} onLoad={load} />
-              </Section>
-
-            {/* Item 2 — the balance rebuilt day by day, with every recharge marked. */}
-            <Section id="balance" item="R2" title="Where the balance went" note="every day, at the slab the month had reached">
-              <BalanceChart />
-              </Section>
-
-            {/* Two column stacks rather than a row grid: a tall panel would
-                otherwise set its whole row's height and leave the shorter one
-                sitting above a block of dead space. */}
-            <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-              <div className="min-w-0 space-y-8">
-                {/* Item 3 — when does it run out, and how much to recharge today. */}
-                <Section id="questions" item="R3" title="When it runs out, and what to put in">
-                  <Questions />
-              </Section>
-
-                <Section id="check" title="Check it against your meter" note="type what the meter showed on a date you remember">
-                  <Suspense fallback={<PanelSkeleton lines={3} />}>
-                    <MeterCheck />
-                  </Suspense>
-              </Section>
-              </div>
-
-              <div className="min-w-0 space-y-8">
-                {/* Item 4 — low-balance habit against monthly habit, same consumption. */}
-                <Section id="habits" item="R4" title="Which recharge habit costs less">
-                  <HabitCompare />
-              </Section>
-
-                <Section id="bill" title="One month&rsquo;s bill" note="and how close the month is to the next slab">
-                  <Suspense fallback={<PanelSkeleton lines={5} />}>
-                    <MonthBill />
-                  </Suspense>
-              </Section>
-              </div>
+              <button
+                type="button"
+                className="mt-4 rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white"
+                onClick={() => load(SEED)}
+              >
+                Load the sample household
+              </button>
             </div>
-          </>
-        )}
-      </main>
+          ) : (
+            <>
+              {setup && (
+                <Suspense fallback={<PanelSkeleton lines={6} />}>
+                  <MeterSetup
+                    onCancel={() => setSetup(false)}
+                    onLoad={(k) => {
+                      load(k)
+                      setSetup(false)
+                    }}
+                  />
+                </Suspense>
+              )}
+
+              {error && (
+                <p
+                  role="alert"
+                  className="flex items-start gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger"
+                >
+                  <span className="flex-1">{error}</span>
+                </p>
+              )}
+
+              {/* The step list on a phone: the same map, above the content. */}
+              <div className="lg:hidden">
+                <Sidebar active={step} onSelect={setStep} className="rounded-card border border-ink-300/60 bg-white p-3 dark:bg-ink-900/40" />
+              </div>
+
+              <StepHeader step={step} />
+
+              {step === 'overview' && (
+                <div className="space-y-6">
+                  <DataNotice
+                    kase={kase}
+                    isPublished={isPublished}
+                    onSetup={() => setSetup(true)}
+                    onStep={setStep}
+                  />
+                  <Hero />
+                  <NextSteps onSelect={setStep} />
+                </div>
+              )}
+              {step === 'household' && <DataSource kase={kase} error={null} onLoad={load} />}
+              {step === 'balance' && <BalanceChart />}
+              {step === 'questions' && <Questions />}
+              {step === 'habits' && <HabitCompare />}
+              {step === 'bill' && (
+                <Suspense fallback={<PanelSkeleton lines={5} />}>
+                  <MonthBill />
+                </Suspense>
+              )}
+              {step === 'check' && (
+                <Suspense fallback={<PanelSkeleton lines={3} />}>
+                  <MeterCheck />
+                </Suspense>
+              )}
+
+              <StepFooter step={step} onSelect={setStep} />
+            </>
+          )}
+        </main>
+      </div>
 
       {/* A footer that carries the tariff it computes on. Anyone checking a
           figure needs the six slab rates and the two fixed charges, and putting
@@ -429,10 +446,10 @@ function Layout() {
 
             <nav aria-label="Footer" className="sm:col-span-3">
               <p className="text-xs font-medium uppercase tracking-[0.14em] text-ink-500">
-                On this page
+The steps
               </p>
               <ul className="mt-3 space-y-1.5 text-sm">
-                {SECTIONS.map((s) => (
+                {STEPS.map((s) => (
                   <li key={s.id}>
                     <a
                       className="text-ink-500 underline-offset-4 hover:text-accent hover:underline"
