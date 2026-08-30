@@ -55,8 +55,12 @@ function Layout() {
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-20 border-b border-ink-700 bg-ink-700 text-ink-50">
-        <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:px-6">
+      {/* Sticky from `sm` up only. On a phone the bar is three rows tall once the
+          household selector and the jump links are reachable, and pinning ~150px
+          of a 667px screen costs more than the jumping saves. It scrolls away
+          instead, and the footer carries the same section list. */}
+      <header className="top-0 z-20 border-b border-ink-700 bg-ink-700 text-ink-50 sm:sticky">
+        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap sm:px-6">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold tracking-tight sm:text-base">
               Recharge Advisor
@@ -67,10 +71,14 @@ function Layout() {
                 : 'Your household · remembered on this device'}
             </p>
           </div>
+          {/* Was `hidden sm:block`. Every case now goes through `load()`, which
+              writes to localStorage, so a reload no longer returns to the sample
+              — this button is the only way back. Hiding it below `sm` left a
+              phone with a one-way door: load a case, and you are stuck with it. */}
           {!isSeed && (
             <button
               type="button"
-              className="hidden shrink-0 rounded-xl border border-white/25 px-3 py-2 text-sm text-ink-50 hover:bg-white/10 sm:block"
+              className="flex min-h-11 shrink-0 items-center rounded-xl border border-white/25 px-3 text-sm text-ink-50 hover:bg-white/10 sm:min-h-0 sm:py-2"
               onClick={reset}
             >
               Back to the sample
@@ -79,12 +87,17 @@ function Layout() {
           <button
             type="button"
             onClick={() => setSetup((v) => !v)}
-            className="shrink-0 rounded-xl bg-sand px-3 py-2 text-sm font-medium text-ink-900 hover:bg-sand/90"
+            className="flex min-h-11 shrink-0 items-center rounded-xl bg-sand px-3 text-sm font-medium text-ink-900 hover:bg-sand/90 sm:min-h-0 sm:py-2"
           >
             {setup ? 'Close' : 'Set up my meter'}
           </button>
+          {/* Was `hidden sm:block`, which left a phone with no way to change case
+              at all — the 25 published cases were desktop-only, and a judge on a
+              phone could not load PUB-02 to see the habits differ. One instance
+              still: it drops to its own full-width row below `sm` and sits inline
+              from `sm` up, so there is no duplicate control to tab through. */}
           {kase && (
-            <div className="hidden w-40 shrink-0 sm:block sm:w-56">
+            <div className="order-last w-full shrink-0 sm:order-none sm:w-56">
               <CasePicker
                 current={kase.case_id}
                 onLoad={load}
@@ -94,19 +107,31 @@ function Layout() {
           )}
         </div>
 
-        <nav aria-label="Sections" className="mx-auto w-full max-w-5xl px-4 pb-2 sm:px-6">
-          <ul className="flex gap-1.5 overflow-x-auto text-sm">
+        {/* Six labels are about 430px of content; a 375px phone cannot show them.
+            Below `sm` this is a snap scroller with a fade at the right edge so it
+            reads as "there is more", rather than a silently clipped row. The
+            scrollbar is hidden because it sat on top of the links. From `sm` up
+            the whole row fits, so it wraps normally and the fade is gone.
+
+            Each link is 44px tall on touch; the old `px-2.5 py-1` gave a 26px
+            target, under every tap-size guideline. Compact again from `sm`. */}
+        <nav aria-label="Sections" className="relative mx-auto w-full max-w-5xl px-4 pb-2 sm:px-6">
+          <ul className="no-scrollbar -mx-1 flex snap-x gap-1 overflow-x-auto px-1 text-sm sm:mx-0 sm:flex-wrap sm:gap-1.5 sm:overflow-visible sm:px-0">
             {SECTIONS.map((s) => (
-              <li key={s.id}>
+              <li key={s.id} className="snap-start">
                 <a
                   href={`#${s.id}`}
-                  className="block whitespace-nowrap rounded-lg px-2.5 py-1 text-ink-300 hover:bg-white/10 hover:text-white"
+                  className="flex min-h-11 items-center whitespace-nowrap rounded-lg px-3 text-ink-300 hover:bg-white/10 hover:text-white sm:min-h-0 sm:px-2.5 sm:py-1"
                 >
                   {s.label}
                 </a>
               </li>
             ))}
           </ul>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-ink-700 to-transparent sm:hidden"
+          />
         </nav>
       </header>
 
