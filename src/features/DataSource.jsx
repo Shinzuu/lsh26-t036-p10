@@ -14,6 +14,7 @@
 import { useState } from 'react'
 import { FileUp, ClipboardPaste } from 'lucide-react'
 import { SEED, parseCases, monthSummary, dateRange } from '../lib/dataset.js'
+import { simulate } from '../lib/tariff.js'
 
 const MONTH_LABEL = { month: 'short', year: 'numeric', timeZone: 'UTC' }
 const formatMonth = (m) => new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-GB', MONTH_LABEL)
@@ -38,6 +39,9 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
   const error = errorProp ?? localError
 
   const summary = monthSummary(kase)
+  // Money that cannot be placed on any reading day would otherwise vanish from
+  // the rebuild with nothing on screen to say so.
+  const unapplied = simulate(kase).unappliedRecharges ?? []
   const { first, last } = dateRange(kase)
 
   function accept(cases) {
@@ -235,6 +239,14 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
             )}
           </div>
         </details>
+
+        {unapplied.length > 0 && (
+          <p className="mt-3 rounded-xl border border-sand bg-sand-soft px-4 py-3 text-sm">
+            {unapplied.length === 1
+              ? `One recharge is dated outside this household's readings — ${formatBDT(unapplied[0].paisa / 100)} on ${unapplied[0].date} — so it is not part of the rebuild below.`
+              : `${unapplied.length} recharges are dated outside this household's readings, totalling ${formatBDT(unapplied.reduce((sum, r) => sum + r.paisa, 0) / 100)}, so they are not part of the rebuild below.`}
+          </p>
+        )}
 
         {error && (
           <p

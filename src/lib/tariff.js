@@ -286,12 +286,22 @@ export function simulate(kase) {
     rechargeFor: (date) => byDate.get(date) ?? 0,
   })
 
+  // A recharge dated outside the reading period cannot be applied - there is no
+  // day to charge it against - but dropping it silently prints a balance that is
+  // wrong by that amount with nothing on screen to say so. Report them instead.
+  const readDates = new Set(kase.days.map((d) => d.date))
+  const unappliedRecharges = (kase.recharges ?? [])
+    .filter((r) => r?.date && !readDates.has(r.date))
+    .map((r) => ({ date: r.date, paisa: toPaisa(r.amount_bdt) }))
+
   return {
     rows,
     totals,
     firstRechargeMonths,
     openingBalancePaisa: openingPaisa,
     closingBalancePaisa: rows.length ? rows.at(-1).balancePaisa : openingPaisa,
+    unappliedRecharges,
+    unappliedPaisa: unappliedRecharges.reduce((sum, r) => sum + r.paisa, 0),
   }
 }
 

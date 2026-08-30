@@ -17,12 +17,16 @@ import DataSource from './features/DataSource.jsx'
 import BalanceChart from './features/BalanceChart.jsx'
 import Questions from './features/Questions.jsx'
 import HabitCompare from './features/HabitCompare.jsx'
+import MonthBill from './features/MonthBill.jsx'
+import MeterCheck from './features/MeterCheck.jsx'
 
 const SECTIONS = [
   { id: 'household', label: 'Household' },
   { id: 'balance', label: 'Balance' },
   { id: 'questions', label: 'Questions' },
   { id: 'habits', label: 'Habits' },
+  { id: 'bill', label: 'Bill' },
+  { id: 'check', label: 'Check' },
 ]
 
 /**
@@ -167,6 +171,17 @@ function Layout() {
               <section id="habits" className="min-w-0 scroll-mt-32">
                 <SectionHead eyebrow="Required item 4 · the habits" />
                 <HabitCompare />
+              </section>
+            </div>
+
+            <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
+              <section id="bill" className="min-w-0 scroll-mt-32">
+                <SectionHead eyebrow="Going further · the monthly bill" note="and the next slab crossing" />
+                <MonthBill />
+              </section>
+              <section id="check" className="min-w-0 scroll-mt-32">
+                <SectionHead eyebrow="Going further · reconciliation" note="the rebuild against the real meter" />
+                <MeterCheck />
               </section>
             </div>
           </>
