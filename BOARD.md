@@ -35,7 +35,7 @@ the per-unit prompts.
 |---|---|---|---|---|---|
 | U1 | R1 — household, ≥6 months of daily readings + recharges, light/heavy/late-large months labelled | shinzuu | `u1-household` | pushed | 18:52 — branch pushed, 15 tests pass. MERGED into main at 18:46 by the integrator; awaiting deploy + live check before done-live. |
 | U2 | R2 — rebuild the balance day by day on the tariff, fixed charges on the month's first recharge, VAT, balance line with recharge markers | Rimjhim | `u2-tariff-engine` | todo | — |
-| U3 | R3 — run-out date, and the amount to recharge today split into energy / higher-slab / fixed / VAT | Robiul | `u3-questions` | todo | — |
+| U3 | R3 — run-out date, and the amount to recharge today split into energy / higher-slab / fixed / VAT | Robiul | `u3-questions` | pushed | 19:02 — `Questions.jsx` only. Verified by esbuild compile and an SSR harness against a reference engine over all 25 fixture cases (parts sum to total in every one). MERGED 19:1x; needs the real `tariff.js` before it can be checked live. |
 | U4 | R4 — compare the two recharge habits over three months on identical consumption | Dip | `u4-habit-compare` | todo | — |
 
 Status values: `todo` → `building` → `pushed` → **`done-live`**. A row only earns
@@ -58,6 +58,8 @@ not `done-live`; "looks right" is not `done-live`.
 
 One line each, newest on top. The integrator clears these and deletes the line.
 
+- (cleared 19:15 — U3's requests are all satisfied: `App.jsx` renders `Questions`,
+  `store.js` exists, `SPEC.md` is in the repo, and the merge freeze is set.)
 - (cleared 18:46 — `src/App.jsx` now renders `DataSource`, and `src/lib/store.js` exists. U1 is visible.)
 
 ## Notes — things everyone should know
