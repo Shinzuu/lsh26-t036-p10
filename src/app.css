@@ -284,3 +284,74 @@ button:active,
     animation: none;
   }
 }
+
+
+/* ---------------------------------------------------------------------------
+   The slide-over menu and the toasts. Both are motion that says where a thing
+   came from, and both stand still under prefers-reduced-motion.
+   ------------------------------------------------------------------------ */
+.drawer {
+  translate: -100% 0;
+  transition: translate 220ms cubic-bezier(0.22, 1, 0.36, 1), overlay 220ms allow-discrete,
+    display 220ms allow-discrete;
+}
+
+.drawer[open] {
+  translate: 0 0;
+}
+
+@starting-style {
+  .drawer[open] {
+    translate: -100% 0;
+  }
+}
+
+.drawer::backdrop {
+  opacity: 0;
+  transition: opacity 220ms ease, overlay 220ms allow-discrete, display 220ms allow-discrete;
+}
+
+.drawer[open]::backdrop {
+  opacity: 1;
+}
+
+@starting-style {
+  .drawer[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+.toast-in {
+  animation: toast-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* A card that responds to the pointer reads as something you can act on. */
+.lift {
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -18px rgb(0 0 0 / 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer,
+  .drawer::backdrop,
+  .toast-in,
+  .lift {
+    transition: none;
+    animation: none;
+  }
+
+  .lift:hover {
+    transform: none;
+  }
+}
