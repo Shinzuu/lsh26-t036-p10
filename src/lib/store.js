@@ -15,11 +15,14 @@
 import { createContext, createElement, useContext, useMemo, useState } from 'react'
 import { SEED } from './dataset.js'
 import { simulate } from './tariff.js'
+import { loadMeter } from './saved.js'
 
 const CaseContext = createContext(null)
 
 export function StoreProvider({ children }) {
-  const [kase, setCase] = useState(SEED)
+  // A meter the user set up themselves survives a reload; nothing else does, so
+  // a first-time visitor always opens on the seeded household.
+  const [kase, setCase] = useState(() => loadMeter() ?? SEED)
   const [error, setError] = useState(null)
   const [selectedDate, setSelectedDate] = useState(null)
 

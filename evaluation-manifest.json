@@ -86,7 +86,7 @@
     "For the required recharge breakdown, energy is every projected unit priced at the lowest slab and the higher-slab part is the real slab-aware cost minus that base, so the four parts reconcile exactly to the total. The problem does not define this baseline, so ours is stated on screen."
   ],
   "known_limitations": [
-    "The application is a calculator with no persistence and no backend. Reloading the page returns to the seeded household; a case loaded by paste or upload is not saved.",
+    "A meter the user sets up is saved in that browser only; the published sample households and pasted or uploaded cases are not saved, so a first-time visitor always opens on the seeded household. There are no accounts and no server, and the household can be downloaded as JSON.",
     "The organizers' format_note for P10 is truncated mid-sentence where it explains a comparison source other than \"readings\", so that path is an assumption: a non-\"readings\" source uses comparison.daily_units as a flat figure for every day of the three months. All 25 published cases use \"readings\", where the case's own daily readings are used.",
     "The problem does not define a baseline for \"the part caused by being in a higher slab\". Ours is every projected unit priced at the lowest slab rate, with the higher-slab part being the real slab-aware cost minus that base, so the four parts reconcile exactly. The definition is stated on screen.",
     "The run-out projection assumes the household keeps consuming its stated usual daily units every day, with no seasonal variation and no further recharge.",

@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import { StoreProvider, useCase } from './lib/store.js'
 import { SEED } from './lib/dataset.js'
+import { saveMeter, clearMeter, loadMeter } from './lib/saved.js'
 import CasePicker from './features/CasePicker.jsx'
 import Hero from './features/Hero.jsx'
 import MeterSetup from './features/MeterSetup.jsx'
@@ -49,6 +50,8 @@ function SectionHead({ eyebrow, note }) {
 function Layout() {
   const { kase, load, error, setError } = useCase()
   const [setup, setSetup] = useState(false)
+  const [mine, setMine] = useState(() => loadMeter()?.case_id ?? null)
+  const usingMine = mine !== null && kase?.case_id === mine
   const empty = !kase || !kase.days?.length
 
   return (
@@ -60,9 +63,22 @@ function Layout() {
               Recharge Advisor
             </p>
             <p className="truncate text-xs text-ink-300">
-              Prepaid meter · rebuilt on the published slab tariff
+              {usingMine ? 'Your meter · saved on this device' : 'Prepaid meter · rebuilt on the published slab tariff'}
             </p>
           </div>
+          {usingMine && (
+            <button
+              type="button"
+              className="shrink-0 rounded-xl border border-white/25 px-3 py-2 text-sm text-ink-50 hover:bg-white/10"
+              onClick={() => {
+                clearMeter()
+                setMine(null)
+                load(SEED)
+              }}
+            >
+              Back to the sample
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setSetup((v) => !v)}
@@ -121,6 +137,8 @@ function Layout() {
                 onCancel={() => setSetup(false)}
                 onLoad={(k) => {
                   load(k)
+                  saveMeter(k)
+                  setMine(k.case_id)
                   setSetup(false)
                 }}
               />

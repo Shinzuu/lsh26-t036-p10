@@ -12,9 +12,10 @@
  * the screen looks the same.
  */
 import { useState } from 'react'
-import { FileUp, ClipboardPaste } from 'lucide-react'
+import { FileUp, ClipboardPaste, Download } from 'lucide-react'
 import { SEED, parseCases, monthSummary, dateRange } from '../lib/dataset.js'
 import { simulate } from '../lib/tariff.js'
+import { downloadCase } from '../lib/saved.js'
 
 const MONTH_LABEL = { month: 'short', year: 'numeric', timeZone: 'UTC' }
 const formatMonth = (m) => new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-GB', MONTH_LABEL)
@@ -173,6 +174,15 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
             ' No month has its largest recharge inside its last seven days.'
           )}
         </p>
+
+        <button
+          type="button"
+          onClick={() => downloadCase(kase)}
+          className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-ink-300/70 px-3 py-1.5 text-sm font-medium"
+        >
+          <Download className="size-4" aria-hidden="true" />
+          Download this household as JSON
+        </button>
 
         {/* Load another household: paste or file, both through the same parser. */}
         <details className="mt-4">

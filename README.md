@@ -50,7 +50,8 @@ recharge to reach a chosen date, and compares two recharge habits on identical c
 
 The selector in the top bar carries all 25 published households from
 `P10_prepaid_meter_public.json`. The application ships case PUB-01 as its seed, so the live
-URL is never empty; reloading restores it, because nothing is persisted.
+URL is never empty. A meter you set up yourself is kept in that browser and reopens with
+you; sample and pasted households are not, so a first-time visitor always lands on the seed.
 
 For data outside the published pack, open **Paste or upload your own data** in the Household
 section and paste a case object or upload a JSON file in the same shape. A file containing a
@@ -73,7 +74,7 @@ cd lsh26-t036-p10
 npm install
 npm run dev                      # development server
 npm run build                    # production build
-node --test src/lib/*.test.mjs   # 57 tests
+node --test src/lib/*.test.mjs   # 59 tests
 ```
 
 ## Problem-solving approach
@@ -83,7 +84,7 @@ are consequences of one rule — the slab counter runs on the calendar month and
 never resets it — and the problem statement says outright that getting it backwards produces
 the wrong number everywhere.
 
-**The chosen solution.** One screen, no backend, no persistence. The engine is a pure module
+**The chosen solution.** One screen, no backend, no accounts. The engine is a pure module
 with its `node --test` suite written before any interface; the interface only reads from it.
 The organizers' published fixture shape is used directly as the data model rather than
 designing a schema and mapping onto it, so an unpublished case in the same shape loads with
@@ -106,7 +107,7 @@ fixed and re-verified on the deployed URL rather than locally.
 
 - **Frontend:** React 19, Tailwind CSS 4, Vite 8
 - **Backend:** none — a pure client-side calculation
-- **Database:** none, and nothing is persisted between reloads
+- **Database:** none. A meter the user sets up is kept in that browser's local storage; nothing leaves the device
 - **Deployment:** Cloudflare Pages
 - **Other material tools:** `@number-flow/react` for animated figures, `lucide-react` for
   icons
@@ -160,8 +161,11 @@ and every item was confirmed on the deployed URL rather than locally.
 
 ## Known limitations
 
-- **No persistence.** The application holds no state between reloads; a household loaded by
-  paste or upload is gone on refresh, and reloading restores the seeded case.
+- **Persistence is limited to a meter you set up yourself,** kept in this browser only. The
+  published sample households and anything pasted or uploaded are not saved, so a first-time
+  visitor always opens on the seeded household. There are no accounts and nothing leaves the
+  device; clearing site data or using another browser loses the meter, and "Download this
+  household as JSON" exists so the data can be kept outside it.
 - **The run-out date assumes flat consumption** — the household's stated usual daily use
   every day, with no seasonality and no further recharge.
 - **The required-recharge window is capped at 18,262 days,** about fifty years. A native date
