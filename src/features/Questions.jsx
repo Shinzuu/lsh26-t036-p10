@@ -169,11 +169,11 @@ export default function Questions() {
   const days = target ? daysBetween(start.fromDate, target) + 1 : 0
 
   return (
-    <section className="w-full">
+    <section className="w-full rounded-card border border-ink-300/60 bg-white p-5 shadow-sm dark:bg-ink-900/40">
       <h2 className="text-lg font-semibold">The family's two questions</h2>
 
       {/* ---------------- Question one: when does the balance run out? -------- */}
-      <article className="mt-4 rounded-card bg-white p-5 shadow-sm dark:bg-ink-900/40">
+      <article className="border-t border-ink-300/50 pt-5 first:border-0 first:pt-0">
         <h3 className="text-sm font-medium text-ink-700 dark:text-ink-300">
           1 · When does the balance run out?
         </h3>
@@ -215,7 +215,7 @@ export default function Questions() {
       </article>
 
       {/* ---------------- Question two: how much to recharge today? ----------- */}
-      <article className="mt-4 rounded-card bg-white p-5 shadow-sm dark:bg-ink-900/40">
+      <article className="mt-6 border-t border-ink-300/50 pt-5">
         <h3 className="text-sm font-medium text-ink-700 dark:text-ink-300">
           2 · How much must be recharged today?
         </h3>

@@ -209,7 +209,10 @@ export default function HabitCompare({ kase: kaseProp }) {
       </div>
 
       {/* The required sentence: where a difference can and cannot come from. */}
-      <p className="mt-4 rounded-card bg-white px-4 py-3 text-sm leading-relaxed text-ink-700 shadow-sm dark:bg-ink-900/40 dark:text-ink-100">
+      <p className="mt-4 border-t border-ink-300/50 pt-4 text-sm leading-relaxed text-ink-700 dark:text-ink-100">
+        Energy and VAT are identical under both habits — the same units are burned against
+        the same calendar-month slab counter, so <em>when</em> the meter is recharged cannot
+        change the rate a unit is charged at.{' '}
         {equal ? (
           <>
             {lowMonths === 0 ? (
@@ -252,7 +255,7 @@ export default function HabitCompare({ kase: kaseProp }) {
 /** Shared shell so every state keeps the same width and padding. */
 function Frame({ children }) {
   return (
-    <section aria-labelledby="habit-compare-heading" className="w-full">
+    <section aria-labelledby="habit-compare-heading" className="w-full rounded-card border border-ink-300/60 bg-white p-5 shadow-sm dark:bg-ink-900/40">
       <h2 id="habit-compare-heading" className="text-xl font-semibold tracking-tight">
         Which recharge habit costs less?
       </h2>
@@ -265,8 +268,8 @@ function HabitCard({ title, rule, habit, monthCount, isCheaper }) {
   const dates = habit?.rechargeDates ?? []
   return (
     <article
-      className={`rounded-card bg-white p-4 shadow-sm dark:bg-ink-900/40 ${
-        isCheaper ? 'ring-2 ring-ok' : ''
+      className={`rounded-xl border p-4 ${
+        isCheaper ? 'border-ok bg-ok/5' : 'border-ink-300/60 bg-ink-100/40 dark:bg-ink-900/30'
       }`}
     >
       <div className="flex items-baseline justify-between gap-2">

@@ -25,8 +25,8 @@ const SECTIONS = [
   { id: 'balance', label: 'Balance' },
   { id: 'questions', label: 'Questions' },
   { id: 'habits', label: 'Habits' },
-  { id: 'bill', label: 'Bill' },
   { id: 'check', label: 'Check' },
+  { id: 'bill', label: 'Bill' },
 ]
 
 /**
@@ -47,7 +47,9 @@ function SectionHead({ eyebrow, note }) {
 }
 
 function Layout() {
-  const { kase, load, error, setError } = useCase()
+  // The store owns remembering: `isSeed` is false once anything else is loaded,
+  // and `reset` forgets it and returns to the published sample.
+  const { kase, load, reset, isSeed, error, setError } = useCase()
   const [setup, setSetup] = useState(false)
   const empty = !kase || !kase.days?.length
 
@@ -60,9 +62,20 @@ function Layout() {
               Recharge Advisor
             </p>
             <p className="truncate text-xs text-ink-300">
-              Prepaid meter · rebuilt on the published slab tariff
+              {isSeed
+                ? 'Prepaid meter · rebuilt on the published slab tariff'
+                : 'Your household · remembered on this device'}
             </p>
           </div>
+          {!isSeed && (
+            <button
+              type="button"
+              className="hidden shrink-0 rounded-xl border border-white/25 px-3 py-2 text-sm text-ink-50 hover:bg-white/10 sm:block"
+              onClick={reset}
+            >
+              Back to the sample
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setSetup((v) => !v)}
@@ -161,28 +174,35 @@ function Layout() {
               <BalanceChart />
             </section>
 
+            {/* Two column stacks rather than a row grid: a tall panel would
+                otherwise set its whole row's height and leave the shorter one
+                sitting above a block of dead space. */}
             <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-              {/* Item 3 — when does it run out, and how much to recharge today. */}
-              <section id="questions" className="min-w-0 scroll-mt-32">
-                <SectionHead eyebrow="Required item 3 · the two questions" />
-                <Questions />
-              </section>
-              {/* Item 4 — low-balance habit against monthly habit, same consumption. */}
-              <section id="habits" className="min-w-0 scroll-mt-32">
-                <SectionHead eyebrow="Required item 4 · the habits" />
-                <HabitCompare />
-              </section>
-            </div>
+              <div className="min-w-0 space-y-8">
+                {/* Item 3 — when does it run out, and how much to recharge today. */}
+                <section id="questions" className="scroll-mt-32">
+                  <SectionHead eyebrow="Required item 3 · the two questions" />
+                  <Questions />
+                </section>
 
-            <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-              <section id="bill" className="min-w-0 scroll-mt-32">
-                <SectionHead eyebrow="Going further · the monthly bill" note="and the next slab crossing" />
-                <MonthBill />
-              </section>
-              <section id="check" className="min-w-0 scroll-mt-32">
-                <SectionHead eyebrow="Going further · reconciliation" note="the rebuild against the real meter" />
-                <MeterCheck />
-              </section>
+                <section id="check" className="scroll-mt-32">
+                  <SectionHead eyebrow="Going further · reconciliation" note="the rebuild against the real meter" />
+                  <MeterCheck />
+                </section>
+              </div>
+
+              <div className="min-w-0 space-y-8">
+                {/* Item 4 — low-balance habit against monthly habit, same consumption. */}
+                <section id="habits" className="scroll-mt-32">
+                  <SectionHead eyebrow="Required item 4 · the habits" />
+                  <HabitCompare />
+                </section>
+
+                <section id="bill" className="scroll-mt-32">
+                  <SectionHead eyebrow="Going further · the monthly bill" note="and the next slab crossing" />
+                  <MonthBill />
+                </section>
+              </div>
             </div>
           </>
         )}
