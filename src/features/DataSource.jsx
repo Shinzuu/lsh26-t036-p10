@@ -11,9 +11,10 @@
  * from PUB-01) or driven by the integrator's store via props. Whichever arrives,
  * the screen looks the same.
  */
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { FileUp, ClipboardPaste, AlertTriangle, X, Download } from 'lucide-react'
-import { SEED, parseAny, monthSummary, dateRange } from '../lib/dataset.js'
+import { SEED, parseAny, monthSummary, dateRange, ACCEPTED_FORMATS } from '../lib/dataset.js'
+import { useDisplay } from '../lib/display.jsx'
 import { simulate } from '../lib/tariff.js'
 import { downloadCase } from '../lib/saved.js'
 
@@ -30,13 +31,19 @@ const formatDate = (d) =>
     year: 'numeric',
     timeZone: 'UTC',
   })
-/** "1 recharge" / "18 recharges" — a count and its noun, agreeing. */
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+/**
+ * "1 recharge" / "18 recharges" — a count and its noun, agreeing, with the count
+ * written in whichever numerals the reader chose.
+ */
+const plural = (n, word, format) => `${format(n)} ${word}${n === 1 ? '' : 's'}`
 
-const formatBDT = (n) =>
-  `৳${n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+// Taka in, formatted through the display layer so the header's currency and
+// numeral choices reach this card too.
+const takaVia = (money) => (n) => money(Math.round(Number(n) * 100))
 
 export default function DataSource({ kase: kaseProp, error: errorProp, onLoad }) {
+  const { money, number } = useDisplay()
+  const formatBDT = takaVia(money)
   const [localCase, setLocalCase] = useState(SEED)
   const [localError, setLocalError] = useState(null)
   const [paste, setPaste] = useState('')
@@ -46,10 +53,13 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
   const kase = kaseProp ?? localCase
   const error = errorProp ?? localError
 
-  const summary = monthSummary(kase)
+  // Both of these walk every reading, so on a household with years of history
+  // they cost real milliseconds — and they were being redone on every render,
+  // including one caused only by switching the display currency.
+  const summary = useMemo(() => monthSummary(kase), [kase])
   // Money that cannot be placed on any reading day would otherwise vanish from
   // the rebuild with nothing on screen to say so.
-  const unapplied = simulate(kase).unappliedRecharges ?? []
+  const unapplied = useMemo(() => simulate(kase).unappliedRecharges ?? [], [kase])
   const { first, last } = dateRange(kase)
 
   function accept(cases) {
@@ -100,8 +110,8 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
             Household <span className="font-mono text-accent">{kase.case_id}</span>
           </h2>
           <p className="text-sm text-ink-500">
-            {plural(kase.days.length, 'daily reading')} · {formatDate(first)} to{' '}
-            {formatDate(last)} · {plural(kase.recharges.length, 'recharge')}
+            {plural(kase.days.length, 'daily reading', number)} · {formatDate(first)} to{' '}
+            {formatDate(last)} · {plural(kase.recharges.length, 'recharge', number)}
           </p>
         </div>
 
@@ -116,11 +126,11 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
           </div>
           <div>
             <dt className="text-ink-500">Usual daily use</dt>
-            <dd className="font-medium">{kase.usual_daily_units} units</dd>
+            <dd className="font-medium">{number(kase.usual_daily_units)} units</dd>
           </div>
           <div>
             <dt className="text-ink-500">Total consumed</dt>
-            <dd className="font-medium">{summary.totalUnits.toLocaleString('en-GB')} units</dd>
+            <dd className="font-medium">{number(summary.totalUnits)} units</dd>
           </div>
         </dl>
 
@@ -147,7 +157,7 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
                 }`}
               >
                 <span className="font-medium">{formatMonth(m.month)}</span>{' '}
-                <span className="text-ink-500">{m.units.toLocaleString('en-GB')} units</span>
+                <span className="text-ink-500">{number(m.units)} units</span>
                 {tags.length > 0 && (
                   <span
                     className={`mt-1 block text-xs font-medium ${
@@ -199,10 +209,27 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
             Upload a CSV, or paste your own data
           </summary>
           <div className="mt-3 space-y-3">
-            <label className="block text-sm" htmlFor="case-paste">
-              Paste a CSV with <code className="font-mono text-xs">date,units</code> columns —
-              add a <code className="font-mono text-xs">recharge</code> column for money in —
-              or a case in the published JSON shape. Files work too.
+            <div className="rounded-xl border border-ink-300/60 bg-ink-100/40 p-3 text-xs dark:bg-ink-900/30">
+              <p className="font-medium text-ink-700 dark:text-ink-200">Two formats are accepted</p>
+              <dl className="mt-1.5 space-y-1.5">
+                {ACCEPTED_FORMATS.map((f) => (
+                  <div key={f.name}>
+                    <dt className="inline font-medium">{f.name}</dt>
+                    <dd className="inline text-ink-500"> — {f.summary}</dd>
+                    <pre className="mt-0.5 overflow-x-auto rounded bg-white/70 px-2 py-1 font-mono text-[11px] text-ink-700 dark:bg-ink-900/50 dark:text-ink-200">
+                      {f.example}
+                    </pre>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-2 text-ink-500">
+                Anything else is refused with a message saying why, and the household on
+                screen stays as it is.
+              </p>
+            </div>
+
+            <label className="mt-3 block text-sm" htmlFor="case-paste">
+              Or paste the contents here
             </label>
             <textarea
               id="case-paste"
@@ -251,7 +278,7 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
                 >
                   {pack.map((c) => (
                     <option key={c.case_id} value={c.case_id}>
-                      {c.case_id} — {c.days.length} readings
+                      {c.case_id} — {number(c.days.length)} readings
                     </option>
                   ))}
                 </select>

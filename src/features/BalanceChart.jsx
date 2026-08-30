@@ -17,9 +17,10 @@
  * path and only the recharge days and the selection get their own elements.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useDisplay } from '../lib/display.jsx'
 import { useCase, useDay } from '../lib/store.js'
 import { linePath, linearScale, niceTicks } from '../lib/chart-scale.js'
-import { formatBDT, monthOf, MONTHLY_FIXED_PAISA, SLABS } from '../lib/tariff.js'
+import { monthOf, MONTHLY_FIXED_PAISA, SLABS } from '../lib/tariff.js'
 import Explainer from './Explainer.jsx'
 
 /**
@@ -67,10 +68,10 @@ const formatMonth = (m) =>
   })
 
 /** "1 day" / "181 days" — a count and its noun, agreeing. */
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+const plural = (n, word, format = (v) => v) => `${format(n)} ${word}${n === 1 ? "" : "s"}`
 
 /** Axis labels are taka, not paisa — no decimals, they are only for scale. */
-const axisTaka = (paisa) => `৳${Math.round(paisa / 100).toLocaleString('en-GB')}`
+const axisTaka = (paisa) => `৳${Math.round(paisa / 100)}`
 
 /** One number with its label. The unit of this panel's evidence. */
 function Stat({ label, value, hint, tone = 'default' }) {
@@ -98,6 +99,7 @@ function Stat({ label, value, hint, tone = 'default' }) {
  * running total — nothing is redrawn by hand.
  */
 function SlabLadder({ unitsBefore, unitsAfter, month }) {
+  const { money, number } = useDisplay()
   const top = 700 // the 601+ band is open-ended; 700u is enough to show it
   const pct = (u) => Math.min(100, (u / top) * 100)
   let floor = 0
@@ -121,7 +123,7 @@ function SlabLadder({ unitsBefore, unitsAfter, month }) {
       <div
         className="relative mt-2 h-7 w-full overflow-hidden rounded-lg border border-ink-300/60 bg-white dark:bg-ink-900/40"
         role="img"
-        aria-label={`${formatMonth(month)} has used ${unitsAfter} units, charged at ৳${(rateNow.paisaPerUnit / 100).toFixed(2)} per unit`}
+        aria-label={`${formatMonth(month)} has used ${number(unitsAfter)} units, charged at ৳${(rateNow.paisaPerUnit / 100).toFixed(2)} per unit`}
       >
         {bands.map((b, i) => (
           <div
@@ -161,9 +163,18 @@ function SlabLadder({ unitsBefore, unitsAfter, month }) {
 }
 
 export default function BalanceChart() {
+  const { money, number } = useDisplay()
   const { kase, sim } = useCase()
   const { selectedDate, selectDay, row } = useDay()
   const svgRef = useRef(null)
+  // The line traces itself once per household. Its own measured length feeds the
+  // dash animation, so the timing is right whatever shape the data makes.
+  const lineRef = useRef(null)
+  useEffect(() => {
+    const el = lineRef.current
+    if (!el?.getTotalLength) return
+    el.style.setProperty('--line-length', `${Math.ceil(el.getTotalLength())}`)
+  })
   const [hoverIndex, setHoverIndex] = useState(null)
   const narrow = useNarrow()
   const box = narrow ? NARROW : WIDE
@@ -203,9 +214,21 @@ export default function BalanceChart() {
     const baseY = y(Math.max(yDomain[0], 0))
     const area = `${path} L ${x(rows.length - 1).toFixed(2)} ${baseY.toFixed(2)} L ${x(0).toFixed(2)} ${baseY.toFixed(2)} Z`
 
-    const recharges = rows
-      .map((r, i) => ({ ...r, i }))
-      .filter((r) => r.rechargePaisa > 0)
+    // Markers are one SVG group each, so a household with years of history can
+    // otherwise put thousands of nodes on the page for dots that overlap into a
+    // solid band anyway. Past a threshold only the largest are drawn, and the
+    // panel says how many are represented — the reader loses nothing they could
+    // have distinguished at this width.
+    const allRecharges = rows.map((r, i) => ({ ...r, i })).filter((r) => r.rechargePaisa > 0)
+    const MARKER_LIMIT = 160
+    const recharges =
+      allRecharges.length <= MARKER_LIMIT
+        ? allRecharges
+        : [...allRecharges]
+            .sort((a, b) => b.rechargePaisa - a.rechargePaisa)
+            .slice(0, MARKER_LIMIT)
+            .sort((a, b) => a.i - b.i)
+    const markersHidden = allRecharges.length - recharges.length
 
     // One boundary per month change, labelled at its first day.
     const boundaries = []
@@ -218,7 +241,7 @@ export default function BalanceChart() {
       }
     })
 
-    return { x, y, ticks, yDomain, path, area, recharges, boundaries, baseY, PLOT_W, PLOT_H }
+    return { x, y, ticks, yDomain, path, area, recharges, markersHidden, allRechargeCount: allRecharges.length, boundaries, baseY, PLOT_W, PLOT_H }
   }, [rows, box])
 
   if (!kase || rows.length === 0 || !chart) {
@@ -232,12 +255,18 @@ export default function BalanceChart() {
     )
   }
 
-  const { x, y, ticks, path, area, recharges, boundaries, PLOT_W, PLOT_H } = chart
+  const { x, y, ticks, path, area, recharges, markersHidden, allRechargeCount, boundaries, PLOT_W, PLOT_H } = chart
   const { w: VIEW_W, h: VIEW_H, pad: PAD, font: FONT } = box
+  // With nothing picked, the last reading is shown: it is where the meter
+  // actually stands, and it means the day detail and the slab ladder are on
+  // screen without anyone having to discover that the chart is clickable.
+  const defaultIndex = rows.length - 1
   const activeIndex =
-    hoverIndex ?? (selectedDate ? rows.findIndex((r) => r.date === selectedDate) : -1)
+    hoverIndex ??
+    (selectedDate ? rows.findIndex((r) => r.date === selectedDate) : defaultIndex)
   const active = activeIndex >= 0 ? rows[activeIndex] : null
   const detail = row ?? active
+  const untouched = hoverIndex === null && !selectedDate
   const wentNegative = rows.some((r) => r.balancePaisa < 0)
 
   /** Pointer x in viewBox units -> nearest reading index. */
@@ -284,8 +313,9 @@ export default function BalanceChart() {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold tracking-tight">Balance, day by day</h2>
         <p className="text-sm text-ink-500">
-          {plural(rows.length, 'day')} · {plural(recharges.length, 'recharge')} ·{' '}
-          <span className="tabular-nums">{formatBDT(sim.closingBalancePaisa)}</span> left on{' '}
+          {plural(rows.length, 'day', number)} ·{' '}
+          {plural(allRechargeCount, 'recharge', number)} ·{' '}
+          <span className="tabular-nums">{money(sim.closingBalancePaisa)}</span> left on{' '}
           {formatDay(rows.at(-1).date)}
         </p>
       </div>
@@ -382,13 +412,15 @@ export default function BalanceChart() {
 
           <path d={area} className="fill-accent/10" />
           <path
+            ref={lineRef}
+            key={rows[0].date + rows.length}
             d={path}
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
             strokeLinejoin="round"
             strokeLinecap="round"
-            className="text-accent"
+            className="draw-line text-accent"
             vectorEffect="non-scaling-stroke"
           />
 
@@ -457,9 +489,15 @@ export default function BalanceChart() {
               className="inline-block h-2 w-2 rounded-full border-2 border-ok"
               aria-hidden="true"
             />
-            first of the month — paid {formatBDT(MONTHLY_FIXED_PAISA)} demand charge + meter rent
+            first of the month — paid {money(MONTHLY_FIXED_PAISA)} demand charge + meter rent
           </span>
           <span>dashed line = month start, where the slab counter resets</span>
+          {markersHidden > 0 && (
+            <span className="text-ink-500">
+              showing the {number(recharges.length)} largest of {number(allRechargeCount)}{' '}
+              recharges — at this width the rest would overlap
+            </span>
+          )}
         </figcaption>
       </figure>
 
@@ -470,7 +508,7 @@ export default function BalanceChart() {
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="text-sm font-medium">{formatDay(detail.date)}</h3>
               <p className="text-xs text-ink-500">
-                {hoverIndex !== null && !row ? 'hovering' : 'selected'} · day{' '}
+                {untouched ? 'latest reading' : hoverIndex !== null && !row ? 'hovering' : 'selected'} · day{' '}
                 {rows.findIndex((r) => r.date === detail.date) + 1} of {rows.length}
               </p>
             </div>
@@ -500,7 +538,7 @@ export default function BalanceChart() {
               />
               <Stat
                 label="Balance after"
-                value={formatBDT(detail.balancePaisa)}
+                value={money(detail.balancePaisa)}
                 tone={detail.balancePaisa < 0 ? 'danger' : 'default'}
                 hint={
                   detail.balancePaisa < 0 ? 'meter would have cut out' : 'closing balance that day'
@@ -515,13 +553,13 @@ export default function BalanceChart() {
             />
 
             <p className="mt-3 border-t border-ink-300/50 pt-2 text-xs text-ink-500">
-              Charged that day: energy {formatBDT(detail.energyPaisa)} + VAT{' '}
-              {formatBDT(detail.vatPaisa)}
+              Charged that day: energy {money(detail.energyPaisa)} + VAT{' '}
+              {money(detail.vatPaisa)}
               {detail.fixedPaisa > 0
-                ? ` + ${formatBDT(detail.fixedPaisa)} demand charge and meter rent (first recharge of ${formatMonth(monthOf(detail.date))})`
+                ? ` + ${money(detail.fixedPaisa)} demand charge and meter rent (first recharge of ${formatMonth(monthOf(detail.date))})`
                 : ''}
               {detail.rechargePaisa > 0
-                ? ` · recharged ${formatBDT(detail.rechargePaisa)}`
+                ? ` · recharged ${money(detail.rechargePaisa)}`
                 : ''}
             </p>
           </>
@@ -535,19 +573,19 @@ export default function BalanceChart() {
 
       {/* What the meter consumed over the whole period. */}
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-5">
-        <Stat label="Energy" value={formatBDT(sim.totals.energyPaisa)} />
-        <Stat label="VAT (5% of energy)" value={formatBDT(sim.totals.vatPaisa)} />
+        <Stat label="Energy" value={money(sim.totals.energyPaisa)} />
+        <Stat label="VAT (5% of energy)" value={money(sim.totals.vatPaisa)} />
         <Stat
           label="Fixed charges"
-          value={formatBDT(sim.totals.fixedPaisa)}
-          hint={`${sim.firstRechargeMonths.length} months × ${formatBDT(MONTHLY_FIXED_PAISA)}`}
+          value={money(sim.totals.fixedPaisa)}
+          hint={`${sim.firstRechargeMonths.length} months × ${money(MONTHLY_FIXED_PAISA)}`}
         />
-        <Stat label="Recharged" value={formatBDT(sim.totals.rechargedPaisa)} tone="ok" />
+        <Stat label="Recharged" value={money(sim.totals.rechargedPaisa)} tone="ok" />
         <Stat
           label="Closing balance"
-          value={formatBDT(sim.closingBalancePaisa)}
+          value={money(sim.closingBalancePaisa)}
           tone={sim.closingBalancePaisa < 0 ? 'danger' : 'default'}
-          hint={`opened at ${formatBDT(sim.openingBalancePaisa)}`}
+          hint={`opened at ${money(sim.openingBalancePaisa)}`}
         />
       </dl>
     </section>
