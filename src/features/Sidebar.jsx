@@ -76,13 +76,13 @@ export default function Sidebar({ active, onSelect, className = '', onNavigate }
                   onSelect(s.id)
                   onNavigate?.()
                 }}
-                className={`group flex w-full items-start gap-2 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                className={`group flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left transition-colors lg:items-start lg:py-2.5 ${
                   current
                     ? 'bg-accent-soft text-accent'
                     : 'text-ink-700 hover:bg-ink-100 dark:text-ink-300 dark:hover:bg-ink-700/30'
                 }`}
               >
-                <span className="mt-0.5 shrink-0">
+                <span className="shrink-0 lg:mt-0.5">
                   {s.item ? (
                     <span
                       className={`inline-block rounded px-1.5 py-0.5 text-[11px] font-semibold ${
@@ -100,8 +100,12 @@ export default function Sidebar({ active, onSelect, className = '', onNavigate }
                 </span>
                 <span className="min-w-0">
                   <span className="block text-sm font-medium leading-tight">{s.label}</span>
+                  {/* The descriptions earn their place in the desktop sidebar,
+                      where they sit beside the content. Stacked above it on a
+                      phone they push the first figure off the screen, so the
+                      list there is labels only. */}
                   <span
-                    className={`mt-0.5 block text-xs leading-snug ${
+                    className={`mt-0.5 hidden text-xs leading-snug lg:block ${
                       current ? 'text-accent/80' : 'text-ink-500'
                     }`}
                   >
@@ -114,7 +118,7 @@ export default function Sidebar({ active, onSelect, className = '', onNavigate }
         })}
       </ul>
 
-      <p className="mt-4 flex items-start gap-2 rounded-xl bg-ink-100/60 px-3 py-2.5 text-xs text-ink-500 dark:bg-ink-700/20">
+      <p className="mt-4 hidden items-start gap-2 rounded-xl bg-ink-100/60 px-3 py-2.5 text-xs text-ink-500 lg:flex dark:bg-ink-700/20">
         <Check className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
         <span>
           R1 to R4 are the four things this tool has to do. Each has its own step, in order.

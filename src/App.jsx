@@ -265,7 +265,9 @@ function Layout() {
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap sm:px-6">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold tracking-tight sm:text-base">Recharge Advisor</p>
-            <p className="truncate text-xs text-ink-300">
+            {/* Truncated to "Prepaid meter · r…" on a phone, which says less
+                than nothing. It is a subtitle, so it goes rather than clips. */}
+            <p className="hidden truncate text-xs text-ink-300 sm:block">
               {isPublished
                 ? 'Prepaid meter · rebuilt on the published slab tariff'
                 : 'Your household · remembered on this device'}
