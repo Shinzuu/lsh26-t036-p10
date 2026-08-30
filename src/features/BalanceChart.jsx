@@ -19,7 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCase, useDay } from '../lib/store.js'
 import { linePath, linearScale, niceTicks } from '../lib/chart-scale.js'
-import { formatBDT, monthOf, MONTHLY_FIXED_PAISA } from '../lib/tariff.js'
+import { formatBDT, monthOf, MONTHLY_FIXED_PAISA, SLABS } from '../lib/tariff.js'
 
 /**
  * Two viewBoxes rather than one stretched box.
@@ -77,6 +77,81 @@ function Stat({ label, value, hint, tone = 'default' }) {
       <dt className="text-xs text-ink-500">{label}</dt>
       <dd className={`mt-0.5 font-medium tabular-nums ${toneClass}`}>{value}</dd>
       {hint ? <p className="mt-0.5 text-xs text-ink-500">{hint}</p> : null}
+    </div>
+  )
+}
+
+/**
+ * The slab ladder — the mechanism this whole problem turns on.
+ *
+ * Six bands, priced upward, and a counter that resets on the 1st. The family
+ * cannot see any of it, which is why their money vanishes. Drawing the month's
+ * running total across the bands makes the rule visible: the fill grows through
+ * the month, the rate under it climbs, and on the 1st the fill snaps back to
+ * the left and the price drops to the bottom rate again.
+ *
+ * Every number here comes from the engine's own SLABS and the selected day's
+ * running total — nothing is redrawn by hand.
+ */
+function SlabLadder({ unitsBefore, unitsAfter, month }) {
+  const top = 700 // the 601+ band is open-ended; 700u is enough to show it
+  const pct = (u) => Math.min(100, (u / top) * 100)
+  let floor = 0
+  const bands = SLABS.map((slab) => {
+    const from = floor
+    const to = slab.upTo === Infinity ? top : slab.upTo
+    floor = to
+    return { from, to, paisaPerUnit: slab.paisaPerUnit }
+  })
+  const rateNow = SLABS.find((b) => unitsAfter <= b.upTo) ?? SLABS[SLABS.length - 1]
+
+  return (
+    <div className="mt-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h4 className="text-sm font-medium">Where {formatMonth(month)} sits on the slab ladder</h4>
+        <p className="text-xs text-ink-500">
+          next unit costs ৳{(rateNow.paisaPerUnit / 100).toFixed(2)} · resets to ৳4.63 on the 1st
+        </p>
+      </div>
+
+      <div
+        className="relative mt-2 h-7 w-full overflow-hidden rounded-lg border border-ink-300/60 bg-white dark:bg-ink-900/40"
+        role="img"
+        aria-label={`${formatMonth(month)} has used ${unitsAfter} units, charged at ৳${(rateNow.paisaPerUnit / 100).toFixed(2)} per unit`}
+      >
+        {bands.map((b, i) => (
+          <div
+            key={b.to}
+            className={`absolute inset-y-0 border-r border-ink-300/40 ${i % 2 ? 'bg-ink-100/40' : ''}`}
+            style={{ left: `${pct(b.from)}%`, width: `${pct(b.to) - pct(b.from)}%` }}
+          />
+        ))}
+        {/* The month so far, and the part this day added. */}
+        <div
+          className="absolute inset-y-0 left-0 bg-accent/45"
+          style={{ width: `${pct(unitsBefore)}%` }}
+        />
+        <div
+          className="absolute inset-y-0 bg-accent"
+          style={{ left: `${pct(unitsBefore)}%`, width: `${Math.max(0.4, pct(unitsAfter) - pct(unitsBefore))}%` }}
+        />
+      </div>
+
+      <div className="mt-1 flex w-full text-[10px] text-ink-500">
+        {bands.map((b) => (
+          <span
+            key={b.to}
+            className="shrink-0 border-l border-transparent pl-1"
+            style={{ width: `${pct(b.to) - pct(b.from)}%` }}
+          >
+            ৳{(b.paisaPerUnit / 100).toFixed(2)}
+          </span>
+        ))}
+      </div>
+      <p className="mt-1 text-xs text-ink-500">
+        Pale block: the month before this day. Solid block: the units this day added. The
+        counter is per calendar month and a recharge never resets it.
+      </p>
     </div>
   )
 }
@@ -425,6 +500,12 @@ export default function BalanceChart() {
                 }
               />
             </dl>
+
+            <SlabLadder
+              unitsBefore={detail.monthUnitsBefore}
+              unitsAfter={detail.monthUnitsAfter}
+              month={monthOf(detail.date)}
+            />
 
             <p className="mt-3 border-t border-ink-300/50 pt-2 text-xs text-ink-500">
               Charged that day: energy {formatBDT(detail.energyPaisa)} + VAT{' '}
