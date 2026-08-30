@@ -90,7 +90,7 @@
     "The organizers' format_note for P10 is truncated mid-sentence where it explains a comparison source other than \"readings\", so that path is an assumption: a non-\"readings\" source uses comparison.daily_units as a flat figure for every day of the three months. All 25 published cases use \"readings\", where the case's own daily readings are used.",
     "The problem does not define a baseline for \"the part caused by being in a higher slab\". Ours is every projected unit priced at the lowest slab rate, with the higher-slab part being the real slab-aware cost minus that base, so the four parts reconcile exactly. The definition is stated on screen.",
     "The run-out projection assumes the household keeps consuming its stated usual daily units every day, with no seasonal variation and no further recharge.",
-    "VAT is rounded to the paisa on each day's energy charge rather than once on the period total, so a full-period total can differ from an aggregate calculation by a few paisa.",
+    "VAT is rounded once over the energy amount for the period rather than per day and summed, so a figure recomputed with per-day rounding can differ by a few paisa over six months (0.26 taka at most across the published cases). The rows still sum exactly to the totals shown.",
     "Item 3 answers for the days from the first unconsumed day onward; today itself is already charged in the day-by-day rebuild."
   ],
   "ai_tools_used": [
