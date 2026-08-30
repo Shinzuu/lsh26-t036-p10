@@ -179,6 +179,7 @@ export function parseCsv(text, { caseId = 'My meter', openingBalance = '0.00' } 
 
   const days = []
   const recharges = []
+  const seenDay = new Map() // date -> row number, to name a duplicate precisely
   let opening = openingBalance
 
   for (let r = 1; r < lines.length; r += 1) {
@@ -193,18 +194,43 @@ export function parseCsv(text, { caseId = 'My meter', openingBalance = '0.00' } 
       if (Number.isFinite(n)) opening = n.toFixed(2)
     }
 
-    if (iUnits !== -1 && cells[iUnits] !== undefined && cells[iUnits] !== '') {
+    const hasUnits = iUnits !== -1 && cells[iUnits] !== undefined && cells[iUnits] !== ''
+    const rawAmount = iAmount !== -1 ? cells[iAmount] : undefined
+    const hasAmount = rawAmount !== undefined && rawAmount !== ''
+
+    let units = null
+    if (hasUnits) {
       const n = Number(cells[iUnits])
       if (!Number.isFinite(n) || n < 0) {
         fail(`Row ${r + 1}: units "${cells[iUnits]}" is not a whole number of units.`)
       }
-      days.push({ date, units: Math.round(n) })
+      units = Math.round(n)
+    } else if (hasAmount) {
+      // A transaction-style row: a recharge with no reading. Dropping the day
+      // would strand the recharge outside the readings and exclude it from the
+      // rebuild — the money would silently not count. A zero-unit day keeps the
+      // recharge inside the period instead.
+      units = 0
     }
 
-    if (iAmount !== -1 && cells[iAmount] !== undefined && cells[iAmount] !== '') {
-      const n = Number(String(cells[iAmount]).replace(/[৳,]/g, ''))
+    if (units !== null) {
+      if (seenDay.has(date)) {
+        const prior = seenDay.get(date)
+        // Two readings for one day would bill the day twice. A recharge-only
+        // row landing on an existing day is fine — the recharge just attaches.
+        if (hasUnits && units > 0) {
+          fail(`Row ${r + 1}: ${date} already has a reading on row ${prior}. One row per day.`)
+        }
+      } else {
+        seenDay.set(date, r + 1)
+        days.push({ date, units })
+      }
+    }
+
+    if (hasAmount) {
+      const n = Number(String(rawAmount).replace(/[৳,]/g, ''))
       if (!Number.isFinite(n) || n < 0) {
-        fail(`Row ${r + 1}: recharge "${cells[iAmount]}" is not an amount.`)
+        fail(`Row ${r + 1}: recharge "${rawAmount}" is not an amount.`)
       }
       if (n > 0) recharges.push({ date, amount_bdt: n.toFixed(2) })
     }
