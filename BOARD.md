@@ -15,7 +15,7 @@ Speed for it.
 | Unit | Bullet | Owner | Status | Last update (time + note) |
 |---|---|---|---|---|
 | U1 | 1 | shinzuu | pushed | 18:52 — branch `u1-household` pushed. seed-p10.json (PUB-01, 181 days), dataset.js (parseCase/parseCases/monthSummary), dataset.test.mjs (15 tests pass), DataSource.jsx (compiles, build passes). Needs the App.jsx wiring below before it is visible live. |
-| U2 | 2 | — | todo | — |
+| U2 | 2 | Rimjhim | building | 18:47 — branch `u2-tariff-engine` cut and pushed. Writing the tariff contract and `node --test` suite first, chart after. |
 | U3 | 3 | — | todo | — |
 | U4 | 4 | — | todo | — |
 
