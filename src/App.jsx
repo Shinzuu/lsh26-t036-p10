@@ -25,8 +25,8 @@ const SECTIONS = [
   { id: 'balance', label: 'Balance' },
   { id: 'questions', label: 'Questions' },
   { id: 'habits', label: 'Habits' },
-  { id: 'bill', label: 'Bill' },
   { id: 'check', label: 'Check' },
+  { id: 'bill', label: 'Bill' },
 ]
 
 /**
@@ -161,28 +161,35 @@ function Layout() {
               <BalanceChart />
             </section>
 
+            {/* Two column stacks rather than a row grid: a tall panel would
+                otherwise set its whole row's height and leave the shorter one
+                sitting above a block of dead space. */}
             <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-              {/* Item 3 — when does it run out, and how much to recharge today. */}
-              <section id="questions" className="min-w-0 scroll-mt-32">
-                <SectionHead eyebrow="Required item 3 · the two questions" />
-                <Questions />
-              </section>
-              {/* Item 4 — low-balance habit against monthly habit, same consumption. */}
-              <section id="habits" className="min-w-0 scroll-mt-32">
-                <SectionHead eyebrow="Required item 4 · the habits" />
-                <HabitCompare />
-              </section>
-            </div>
+              <div className="min-w-0 space-y-8">
+                {/* Item 3 — when does it run out, and how much to recharge today. */}
+                <section id="questions" className="scroll-mt-32">
+                  <SectionHead eyebrow="Required item 3 · the two questions" />
+                  <Questions />
+                </section>
 
-            <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-              <section id="bill" className="min-w-0 scroll-mt-32">
-                <SectionHead eyebrow="Going further · the monthly bill" note="and the next slab crossing" />
-                <MonthBill />
-              </section>
-              <section id="check" className="min-w-0 scroll-mt-32">
-                <SectionHead eyebrow="Going further · reconciliation" note="the rebuild against the real meter" />
-                <MeterCheck />
-              </section>
+                <section id="check" className="scroll-mt-32">
+                  <SectionHead eyebrow="Going further · reconciliation" note="the rebuild against the real meter" />
+                  <MeterCheck />
+                </section>
+              </div>
+
+              <div className="min-w-0 space-y-8">
+                {/* Item 4 — low-balance habit against monthly habit, same consumption. */}
+                <section id="habits" className="scroll-mt-32">
+                  <SectionHead eyebrow="Required item 4 · the habits" />
+                  <HabitCompare />
+                </section>
+
+                <section id="bill" className="scroll-mt-32">
+                  <SectionHead eyebrow="Going further · the monthly bill" note="and the next slab crossing" />
+                  <MonthBill />
+                </section>
+              </div>
             </div>
           </>
         )}

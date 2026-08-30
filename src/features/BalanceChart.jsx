@@ -219,7 +219,7 @@ export default function BalanceChart() {
 
   if (!kase || rows.length === 0 || !chart) {
     return (
-      <section className="rounded-card border border-ink-300/60 bg-white/70 p-4 dark:bg-ink-900/40">
+      <section className="w-full">
         <h2 className="text-lg font-semibold tracking-tight">Balance, day by day</h2>
         <p className="mt-2 text-sm text-ink-500">
           No readings to rebuild yet. Load a case above and the balance line appears here.
@@ -276,7 +276,7 @@ export default function BalanceChart() {
   }
 
   return (
-    <section className="rounded-card border border-ink-300/60 bg-white/70 p-4 dark:bg-ink-900/40">
+    <section className="w-full">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold tracking-tight">Balance, day by day</h2>
         <p className="text-sm text-ink-500">
