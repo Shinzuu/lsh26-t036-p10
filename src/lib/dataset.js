@@ -252,8 +252,39 @@ export function looksLikeCsv(text) {
 }
 
 /** Accepts JSON or CSV and returns cases either way. */
+/**
+ * The two shapes this application accepts, named here so the interface and the
+ * error messages can both quote the same contract.
+ */
+export const ACCEPTED_FORMATS = [
+  {
+    name: 'CSV',
+    summary: 'a date column, a units column, and optionally a recharge column',
+    example: 'date,units,recharge\n2026-01-01,12,\n2026-01-09,14,300.00',
+  },
+  {
+    name: 'JSON',
+    summary: "the organizers' case shape, or a file with a \"cases\" list of them",
+    example: '{ "case_id": "PUB-01", "opening_balance_bdt": "310.00", "days": [ … ] }',
+  },
+]
+
 export function parseAny(text, opts) {
-  return looksLikeCsv(text) ? [parseCsv(text, opts)] : parseCases(text)
+  const trimmed = String(text ?? '').trim()
+  if (!trimmed) fail('Nothing to read — choose a file or paste something in.')
+
+  // Anything that is plainly neither shape is rejected on its own terms, so the
+  // message is about the file rather than about our parser failing inside it.
+  const looksJson = trimmed.startsWith('{') || trimmed.startsWith('[')
+  if (!looksLikeCsv(trimmed) && !looksJson) {
+    const head = trimmed.slice(0, 24).replace(/\s+/g, ' ')
+    fail(
+      `This does not look like either format we read. It starts "${head}…", ` +
+        'which is neither CSV (a header row with a date column) nor JSON (starting with { or [). ' +
+        'A spreadsheet exported as CSV, or a case file in the organizers\' JSON shape, both work.',
+    )
+  }
+  return looksLikeCsv(trimmed) ? [parseCsv(trimmed, opts)] : parseCases(trimmed)
 }
 
 function validateCase(kase, where = '') {
