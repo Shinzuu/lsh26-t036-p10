@@ -1,0 +1,83 @@
+/* ---------------------------------------------------------------------------
+   Slate — cool neutral, blue accent
+
+   The general-purpose pick, and the closest to the kit as shipped. Use it when
+   the problem has no strong domain colour of its own: dashboards, CRUD, internal
+   tools, anything where the palette should get out of the way.
+
+   Reads as the kit's own look with the contrast defects removed. If you activate
+   exactly one theme and never think about it again, this is the one.
+
+   Activate: add one line to src/app.css, after the @theme block —
+       @import './themes/slate.css';
+
+   Every value below is solved, not eyeballed: each one is the lightness that
+   hits a WCAG contrast target against the surface it actually sits on, then
+   checked against the sRGB gamut. themes.test.mjs re-checks all of it. Editing
+   a number by hand is fine — run the test afterwards.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --color-ink-50:        oklch(0.98 0.005 260);      /* #f6f9fc  page background (light) / body text (dark) */
+  --color-ink-100:       oklch(0.955 0.008 260);     /* #edf0f6  raised surface, table stripe */
+  --color-ink-300:       oklch(0.737 0.012 260);     /* #a5aab2  borders, dividers, input outlines */
+  --color-ink-500:       oklch(0.545 0.016 260);     /* #6b707a  secondary text — 44 uses, the most-used token in the kit */
+  --color-ink-700:       oklch(0.392 0.02 260);      /* #3f4651  strong secondary text; raised surface in dark mode */
+  --color-ink-900:       oklch(0.18 0.022 260);      /* #0c121b  body text (light) / page background (dark) */
+  --color-accent:        oklch(0.541 0.19 258);      /* #1169da  links, primary buttons, focus ring */
+  --color-accent-soft:   oklch(0.965 0.014 258);     /* #eef4fd  chip and badge background */
+  --color-danger:        oklch(0.568 0.19 25);       /* #cf3638  errors, destructive actions */
+  --color-ok:            oklch(0.526 0.138 152);     /* #018040  success, healthy, in-stock */
+}
+
+/* ---------------------------------------------------------------------------
+   Dark scheme.
+
+   app.css swaps only the page background and body text for dark mode; every
+   other token keeps its light-mode value, and the kit patches the gap with
+   `dark:` variants at some call sites but not others. Overriding a token that
+   already has a `dark:` variant would fight it, so this block moves only what
+   needs moving — checked against the kit's own markup:
+
+     ink-100   13 of 13 background uses already carry dark:bg-*    left alone
+     ink-300   used as dark:text-ink-300, must stay light          left alone
+     ink-700   used as dark:bg-ink-700, must stay dark             left alone
+     ink-500   42 of 44 text uses have no dark: variant            moved
+     accent    has to lift off the dark page                       moved
+     danger    sits on bg-danger/10 over the dark page             moved
+     ok        sits on bg-ok/10 over the dark page                 moved
+
+   No single grey clears 4.5:1 against both a near-white and a near-black page:
+   the two inequalities have no overlapping solution. So either ink-500 moves
+   here, or 42 call sites stay illegible in dark mode. That is what this block
+   is for.
+   --------------------------------------------------------------------------- */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-ink-500:       oklch(0.595 0.014 260);     /* #7a7f87 */
+    --color-accent:        oklch(0.599 0.162 258);     /* #3b7ede */
+    --color-accent-soft:   oklch(0.182 0.06 258);      /* #02112c */
+    --color-danger:        oklch(0.613 0.15 25);       /* #cf5a54 */
+    --color-ok:            oklch(0.581 0.13 152);      /* #2e9052 */
+  }
+
+  /* -------------------------------------------------------------------------
+     One compatibility rule, and why it is here.
+
+     Lifting --color-accent for the dark page forces --color-accent-soft to
+     invert with it; a light accent on a near-white chip is unreadable. That is
+     right everywhere the chip carries accent-coloured text, and wrong at the
+     two places the kit puts `text-ink-900` on that chip — in dark mode ink-900
+     IS the page background, so the label would vanish into the chip.
+
+     The clean fix is `text-ink-900 dark:text-ink-50` at those two call sites,
+     which live in recipe files this theme does not own. Rather than edit them,
+     the repair sits here: two classes outrank one, and nothing outside that
+     exact pairing is touched. Delete this rule the day the call sites carry
+     their own dark: variant.
+     ------------------------------------------------------------------------- */
+  .bg-accent-soft.text-ink-900 {
+    color: var(--color-ink-50);
+  }
+}
