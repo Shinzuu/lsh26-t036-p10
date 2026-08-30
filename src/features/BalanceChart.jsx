@@ -66,6 +66,9 @@ const formatMonth = (m) =>
     timeZone: 'UTC',
   })
 
+/** "1 day" / "181 days" — a count and its noun, agreeing. */
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+
 /** Axis labels are taka, not paisa — no decimals, they are only for scale. */
 const axisTaka = (paisa) => `৳${Math.round(paisa / 100).toLocaleString('en-GB')}`
 
@@ -281,7 +284,7 @@ export default function BalanceChart() {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold tracking-tight">Balance, day by day</h2>
         <p className="text-sm text-ink-500">
-          {rows.length} days · {recharges.length} recharges ·{' '}
+          {plural(rows.length, 'day')} · {plural(recharges.length, 'recharge')} ·{' '}
           <span className="tabular-nums">{formatBDT(sim.closingBalancePaisa)}</span> left on{' '}
           {formatDay(rows.at(-1).date)}
         </p>
@@ -306,7 +309,7 @@ export default function BalanceChart() {
           tabIndex={0}
           aria-label={`Meter balance from ${formatDay(rows[0].date)} to ${formatDay(
             rows.at(-1).date,
-          )}, with ${recharges.length} recharges marked. Use the left and right arrow keys to read a day.`}
+          )}, with ${plural(recharges.length, 'recharge')} marked. Use the left and right arrow keys to read a day.`}
           onPointerMove={onMove}
           onPointerLeave={() => setHoverIndex(null)}
           onPointerDown={onPick}
