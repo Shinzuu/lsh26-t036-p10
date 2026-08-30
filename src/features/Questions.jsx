@@ -221,11 +221,12 @@ export default function Questions() {
         ) : parts ? (
           <>
             <p className="mt-4 text-3xl font-semibold tracking-tight">
-              {formatBDT(parts.totalPaisa)}
+              {formatBDT(parts.netRequiredPaisa)}
             </p>
             <p className="mt-1 text-sm text-ink-500">
               to cover {days} days at {kase.usual_daily_units} units a day, through{' '}
-              {longDate(target)}.
+              {longDate(target)} — after the {formatBDT(start.fromBalancePaisa)} already on the
+              meter.
             </p>
 
             <div className="mt-4 text-sm">
@@ -245,7 +246,13 @@ export default function Questions() {
                 paisa={parts.fixedPaisa}
               />
               <Row label="VAT" hint="5% of the energy amount only" paisa={parts.vatPaisa} />
-              <Row label="Total" paisa={sumPaisa} strong />
+              <Row label="Cost of those days" paisa={sumPaisa} strong />
+              <Row
+                label="Already on the meter"
+                hint="today's balance, which pays for the first of those days"
+                paisa={-start.fromBalancePaisa}
+              />
+              <Row label="Recharge today" paisa={parts.netRequiredPaisa} strong />
             </div>
 
             <p
@@ -255,7 +262,8 @@ export default function Questions() {
                 <>
                   The four parts add up: {formatBDT(parts.energyPaisa)} +{' '}
                   {formatBDT(parts.higherSlabPaisa)} + {formatBDT(parts.fixedPaisa)} +{' '}
-                  {formatBDT(parts.vatPaisa)} = {formatBDT(parts.totalPaisa)}.
+                  {formatBDT(parts.vatPaisa)} = {formatBDT(parts.totalPaisa)}, less the{' '}
+                  {formatBDT(start.fromBalancePaisa)} already on the meter.
                 </>
               ) : (
                 <>
