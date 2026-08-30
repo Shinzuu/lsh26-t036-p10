@@ -6,6 +6,7 @@
  * large, and everything below them is the working that justifies them.
  */
 import { CalendarClock, Wallet, Zap } from 'lucide-react'
+import { useMemo } from 'react'
 import { useDisplay, Money } from '../lib/display.jsx'
 import { useCase } from '../lib/store.js'
 import { projectRunOut, requiredRecharge } from '../lib/tariff.js'
@@ -55,15 +56,20 @@ export default function Hero() {
 
   const from = nextDay(kase.today)
   const sameMonth = from.slice(0, 7) === kase.today.slice(0, 7)
-  const start = {
+  const start = useMemo(() => ({
     fromDate: from,
     fromBalancePaisa: last.balancePaisa,
     monthUnitsBefore: sameMonth ? last.monthUnitsBefore + last.units : 0,
     dailyUnits: kase.usual_daily_units,
-  }
+  }), [from, last, sameMonth, kase.usual_daily_units])
 
-  const runOut = projectRunOut(start)
-  const needed = requiredRecharge({ ...start, targetDate: kase.target_date })
+  // Both walk forward a day at a time, so they are tied to the case rather than
+  // recomputed whenever a display preference changes.
+  const runOut = useMemo(() => projectRunOut(start), [start])
+  const needed = useMemo(
+    () => requiredRecharge({ ...start, targetDate: kase.target_date }),
+    [start, kase.target_date],
+  )
 
   return (
     <section aria-label="Where this household stands" className="grid gap-4 lg:grid-cols-5">

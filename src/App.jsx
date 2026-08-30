@@ -73,13 +73,15 @@ function Section({ id, item, title, note, children }) {
 function SectionHead({ item, title, note }) {
   return (
     <div className="mb-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <div className="flex min-h-7 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <p className="flex items-baseline gap-2">
-          {item && (
-            <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-accent">
-              {item}
-            </span>
-          )}
+          <span
+            className={`rounded px-1.5 py-0.5 text-[11px] font-semibold tracking-wide ${
+              item ? 'bg-accent-soft text-accent' : 'bg-ink-100 text-ink-500 dark:bg-ink-700/40'
+            }`}
+          >
+            {item ?? 'more'}
+          </span>
           <span className="text-sm font-semibold tracking-tight">{title}</span>
         </p>
         {note && <p className="text-xs text-ink-500">{note}</p>}

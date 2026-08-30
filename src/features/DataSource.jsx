@@ -11,7 +11,7 @@
  * from PUB-01) or driven by the integrator's store via props. Whichever arrives,
  * the screen looks the same.
  */
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { FileUp, ClipboardPaste, AlertTriangle, X, Download } from 'lucide-react'
 import { SEED, parseAny, monthSummary, dateRange, ACCEPTED_FORMATS } from '../lib/dataset.js'
 import { useDisplay } from '../lib/display.jsx'
@@ -47,10 +47,13 @@ export default function DataSource({ kase: kaseProp, error: errorProp, onLoad })
   const kase = kaseProp ?? localCase
   const error = errorProp ?? localError
 
-  const summary = monthSummary(kase)
+  // Both of these walk every reading, so on a household with years of history
+  // they cost real milliseconds — and they were being redone on every render,
+  // including one caused only by switching the display currency.
+  const summary = useMemo(() => monthSummary(kase), [kase])
   // Money that cannot be placed on any reading day would otherwise vanish from
   // the rebuild with nothing on screen to say so.
-  const unapplied = simulate(kase).unappliedRecharges ?? []
+  const unapplied = useMemo(() => simulate(kase).unappliedRecharges ?? [], [kase])
   const { first, last } = dateRange(kase)
 
   function accept(cases) {

@@ -96,6 +96,7 @@ function Stat({ label, value, hint, tone = 'default' }) {
  * running total — nothing is redrawn by hand.
  */
 function SlabLadder({ unitsBefore, unitsAfter, month }) {
+  const { money, number } = useDisplay()
   const top = 700 // the 601+ band is open-ended; 700u is enough to show it
   const pct = (u) => Math.min(100, (u / top) * 100)
   let floor = 0
@@ -210,9 +211,21 @@ export default function BalanceChart() {
     const baseY = y(Math.max(yDomain[0], 0))
     const area = `${path} L ${x(rows.length - 1).toFixed(2)} ${baseY.toFixed(2)} L ${x(0).toFixed(2)} ${baseY.toFixed(2)} Z`
 
-    const recharges = rows
-      .map((r, i) => ({ ...r, i }))
-      .filter((r) => r.rechargePaisa > 0)
+    // Markers are one SVG group each, so a household with years of history can
+    // otherwise put thousands of nodes on the page for dots that overlap into a
+    // solid band anyway. Past a threshold only the largest are drawn, and the
+    // panel says how many are represented — the reader loses nothing they could
+    // have distinguished at this width.
+    const allRecharges = rows.map((r, i) => ({ ...r, i })).filter((r) => r.rechargePaisa > 0)
+    const MARKER_LIMIT = 160
+    const recharges =
+      allRecharges.length <= MARKER_LIMIT
+        ? allRecharges
+        : [...allRecharges]
+            .sort((a, b) => b.rechargePaisa - a.rechargePaisa)
+            .slice(0, MARKER_LIMIT)
+            .sort((a, b) => a.i - b.i)
+    const markersHidden = allRecharges.length - recharges.length
 
     // One boundary per month change, labelled at its first day.
     const boundaries = []
@@ -225,7 +238,7 @@ export default function BalanceChart() {
       }
     })
 
-    return { x, y, ticks, yDomain, path, area, recharges, boundaries, baseY, PLOT_W, PLOT_H }
+    return { x, y, ticks, yDomain, path, area, recharges, markersHidden, allRechargeCount: allRecharges.length, boundaries, baseY, PLOT_W, PLOT_H }
   }, [rows, box])
 
   if (!kase || rows.length === 0 || !chart) {
@@ -239,12 +252,18 @@ export default function BalanceChart() {
     )
   }
 
-  const { x, y, ticks, path, area, recharges, boundaries, PLOT_W, PLOT_H } = chart
+  const { x, y, ticks, path, area, recharges, markersHidden, allRechargeCount, boundaries, PLOT_W, PLOT_H } = chart
   const { w: VIEW_W, h: VIEW_H, pad: PAD, font: FONT } = box
+  // With nothing picked, the last reading is shown: it is where the meter
+  // actually stands, and it means the day detail and the slab ladder are on
+  // screen without anyone having to discover that the chart is clickable.
+  const defaultIndex = rows.length - 1
   const activeIndex =
-    hoverIndex ?? (selectedDate ? rows.findIndex((r) => r.date === selectedDate) : -1)
+    hoverIndex ??
+    (selectedDate ? rows.findIndex((r) => r.date === selectedDate) : defaultIndex)
   const active = activeIndex >= 0 ? rows[activeIndex] : null
   const detail = row ?? active
+  const untouched = hoverIndex === null && !selectedDate
   const wentNegative = rows.some((r) => r.balancePaisa < 0)
 
   /** Pointer x in viewBox units -> nearest reading index. */
@@ -291,7 +310,7 @@ export default function BalanceChart() {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold tracking-tight">Balance, day by day</h2>
         <p className="text-sm text-ink-500">
-          {number(rows.length)} days · {number(recharges.length)} recharges ·{' '}
+          {number(rows.length)} days · {number(allRechargeCount)} recharges ·{' '}
           <span className="tabular-nums">{money(sim.closingBalancePaisa)}</span> left on{' '}
           {formatDay(rows.at(-1).date)}
         </p>
@@ -469,6 +488,12 @@ export default function BalanceChart() {
             first of the month — paid {money(MONTHLY_FIXED_PAISA)} demand charge + meter rent
           </span>
           <span>dashed line = month start, where the slab counter resets</span>
+          {markersHidden > 0 && (
+            <span className="text-ink-500">
+              showing the {number(recharges.length)} largest of {number(allRechargeCount)}{' '}
+              recharges — at this width the rest would overlap
+            </span>
+          )}
         </figcaption>
       </figure>
 
@@ -479,7 +504,7 @@ export default function BalanceChart() {
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="text-sm font-medium">{formatDay(detail.date)}</h3>
               <p className="text-xs text-ink-500">
-                {hoverIndex !== null && !row ? 'hovering' : 'selected'} · day{' '}
+                {untouched ? 'latest reading' : hoverIndex !== null && !row ? 'hovering' : 'selected'} · day{' '}
                 {rows.findIndex((r) => r.date === detail.date) + 1} of {rows.length}
               </p>
             </div>
