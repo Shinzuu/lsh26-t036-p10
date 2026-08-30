@@ -94,6 +94,7 @@ function HeaderTools() {
     <div className="relative flex items-center gap-1" data-header-tools>
       <Tooltip
         side="bottom"
+        className="hidden sm:inline-flex"
         label="Every figure is rebuilt from the household's own readings using the published slab tariff. Nothing is estimated unless the screen says so."
       >
         <button
@@ -116,7 +117,7 @@ function HeaderTools() {
         }`}
       >
         <Settings2 className="size-4" aria-hidden="true" />
-        <span className="hidden sm:inline">{currency.code}</span>
+        <span>{currency.code}</span>
         <ChevronDown className="size-3.5" aria-hidden="true" />
       </button>
 
@@ -204,20 +205,23 @@ function StepHeader({ step }) {
   if (!s) return null
   const closing = sim?.rows?.at(-1)?.balancePaisa
   return (
-    <header>
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        {s.id !== 'overview' && kase && (
-          <span className="order-last ml-auto flex flex-wrap items-center gap-1.5 text-xs">
-            <span className="rounded-full border border-ink-300/60 px-2.5 py-1 text-ink-500">
-              {kase.case_id}
-            </span>
-            {closing !== undefined && (
-              <span className="rounded-full border border-ink-300/60 px-2.5 py-1 tabular-nums text-ink-500">
-                {money(closing)} on the meter
-              </span>
-            )}
+    <header className="relative max-sm:flex max-sm:flex-col">
+      {/* Which household, and what is on it. Beside the title from sm up; on a
+          phone that slot does not exist, so they take their own quiet row after
+          the description instead of wedging into the middle of the head. */}
+      {s.id !== 'overview' && kase && (
+        <span className="mt-2 flex flex-wrap items-center gap-1.5 text-xs sm:absolute sm:right-0 sm:top-1 sm:mt-0 max-sm:order-last">
+          <span className="rounded-full border border-ink-300/60 px-2.5 py-1 text-ink-500">
+            {kase.case_id}
           </span>
-        )}
+          {closing !== undefined && (
+            <span className="rounded-full border border-ink-300/60 px-2.5 py-1 tabular-nums text-ink-500">
+              {money(closing)} on the meter
+            </span>
+          )}
+        </span>
+      )}
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 sm:pr-56">
         {s.item && (
           <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-accent">
             {s.item}
@@ -409,7 +413,7 @@ function Layout() {
           </button>
 
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold tracking-tight sm:text-base">Recharge Advisor</p>
+            <p className="truncate text-sm font-semibold tracking-tight sm:text-base">Recharge Advisor</p>
             {/* Truncated to "Prepaid meter · r…" on a phone, which says less
                 than nothing. It is a subtitle, so it goes rather than clips. */}
             <p className="hidden truncate text-xs text-ink-300 sm:block">
@@ -435,7 +439,7 @@ function Layout() {
           <button
             type="button"
             onClick={() => setSetup((v) => !v)}
-            className="flex min-h-11 shrink-0 items-center rounded-xl bg-sand px-3 text-sm font-medium text-ink-900 hover:bg-sand/90 sm:min-h-0 sm:py-2"
+            className="hidden min-h-11 shrink-0 items-center rounded-xl bg-sand px-3 text-sm font-medium text-ink-900 hover:bg-sand/90 sm:flex sm:min-h-0 sm:py-2"
           >
             {setup ? 'Close' : 'Set up my meter'}
           </button>
@@ -445,7 +449,14 @@ function Layout() {
               still: it drops to its own full-width row below `sm` and sits inline
               from `sm` up, so there is no duplicate control to tab through. */}
           {kase && (
-            <div className="order-last w-full shrink-0 sm:order-none sm:w-56">
+            <div className="order-last flex w-full shrink-0 items-center gap-2 sm:order-none sm:w-56">
+              <button
+                type="button"
+                onClick={() => setSetup((v) => !v)}
+                className="flex min-h-11 shrink-0 items-center rounded-xl bg-sand px-3 text-sm font-medium text-ink-900 sm:hidden"
+              >
+                {setup ? 'Close' : 'Set up'}
+              </button>
               <CasePicker
                 current={kase.case_id}
                 onLoad={(k) => {
