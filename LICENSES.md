@@ -27,7 +27,7 @@ starter kit. This project has no backend and never imports it, so it is not in t
 
 | Asset | Source | Licence |
 |---|---|---|
-| Starter kit — Vite + React + Tailwind scaffold, capability modules, colour palettes, helper scripts | Written by this team before the event, in the team's private preparation repository. Declared in full in `EVENT.md` | MIT, our own code |
+| Starter kit — Vite + React + Tailwind scaffold and helper scripts. Its capability modules and colour palettes were deleted once the build no longer used them; `src/lib/chart-scale.js` is a copy of the charts module's scale helpers | Written by this team before the event, in the team's private preparation repository. Declared in full in `EVENT.md` | MIT, our own code |
 
 ## Data
 

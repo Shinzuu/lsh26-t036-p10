@@ -1,5 +1,5 @@
 /**
- * Copied from src/recipes/charts/scale.js for U2 (SPEC.md: copy the recipe into
+ * Copied from our starter kit's charts recipe for U2 (SPEC.md: copy the recipe into
  * src/lib, never import across recipe folders). Unmodified.
  *
  * scale.js — the maths behind the charts, with none of the rendering.
@@ -13,7 +13,7 @@
  */
 
 /**
- * Copied from src/recipes/charts/scale.js for U2 (SPEC.md: copy the recipe into
+ * Copied from our starter kit's charts recipe for U2 (SPEC.md: copy the recipe into
  * src/lib, never import across recipe folders). Unmodified.
  *
  * Round a raw span to a "nice" number (1, 2, 5, 10 × a power of ten) the

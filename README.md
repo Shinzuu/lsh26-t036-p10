@@ -136,7 +136,29 @@ against our own code, and every finding was fixed and re-verified on the deploye
 
 ## Known limitations
 
-*(Filled at the freeze.)*
+- **No persistence.** The app is a calculator: it holds no state between reloads, and a
+  household loaded by paste or upload is gone on refresh. Reloading restores the seeded
+  case, which is what makes the live URL safe to hand to a stranger.
+- **The run-out date assumes flat consumption.** It projects the household's stated usual
+  daily use every day with no seasonality and no further recharge. A heavy month would
+  bring the date forward.
+- **The required-recharge window is capped at 18,262 days,** about fifty years. A native
+  date picker reaches the year 9999, and projecting three million days one at a time
+  froze the page; past the cap the app answers for the capped window and says so.
+- **A `comparison.source` other than `"readings"` is our reading, not theirs.** The
+  organizers' `format_note` is truncated mid-sentence at exactly the point where it would
+  have defined the alternative, so we treat it as a flat `comparison.daily_units` for
+  every day of the three months. All 25 published cases use `"readings"`.
+- **The baseline for "the part caused by being in a higher slab" is ours.** The problem
+  names the four parts without defining the split, so energy is every projected unit at
+  the lowest slab rate and the higher-slab part is the real slab-aware cost minus that.
+  The definition is stated on screen so the arithmetic can be followed.
+- **VAT is rounded once over the period,** not per day and summed, so a figure recomputed
+  with per-day rounding differs by a few paisa over six months. The daily rows still sum
+  exactly to the totals shown.
+- **A recharge dated outside the reading period is not counted.** Every published case
+  keeps recharges inside the readings; a case that did not would see that money ignored
+  in the rebuild.
 
 ## AI assistant use
 

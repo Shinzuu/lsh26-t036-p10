@@ -19,8 +19,8 @@ second commit onward is event work.
 |---|---|---|
 | Application shell | `starter-kit-react/` in the team's private preparation repository | `index.html`, `src/main.jsx`, `src/App.jsx`, `src/app.css`, `src/lib/Loop.jsx` — a Vite + React 19 + Tailwind 4 shell with a placeholder demo component and template branding |
 | Build and deploy configuration | same | `package.json`, `package-lock.json`, `vite.config.js`, `jsconfig.json`, `public/favicon.svg` |
-| Storage adapter | same, `src/lib/db.js` | A generic adapter that uses `localStorage` when no Supabase keys are present and Supabase when they are. Unused in this project — P10 needs no persistence |
-| Capability library | same, `src/recipes/` | Thirteen generic, self-contained modules with their own `node --test` suites: csv-import, search-filter, charts, auth, upload, map, realtime, llm, bd-formats, export, matching, queue, corroborate. None is specific to any released problem. Unused recipes are deleted before submission |
+| Storage adapter | same, `src/lib/db.js` | A generic adapter for localStorage or Supabase. Unused in this project — P10 needs no persistence — and deleted before submission |
+| Capability library | same, `src/recipes/` | Thirteen generic, self-contained modules with their own `node --test` suites: csv-import, search-filter, charts, auth, upload, map, realtime, llm, bd-formats, export, matching, queue, corroborate. None is specific to any released problem. All of them have now been deleted from this repository; only `src/lib/chart-scale.js`, a copy of the charts recipe's scale helpers, remains, and it is part of the event build |
 | Colour palettes | same, `src/themes/` | Five accessible palettes (slate, civic, ochre, plum, noir) as CSS custom-property blocks, plus a contrast test |
 | Helper scripts | same, `scripts/` | `preflight.sh` (scans for committed secrets), `smoke-live.sh` (checks a deployed URL returns 200 and serves the expected bundle), `compress-video.sh` |
 | Documentation templates | same | `README-TEMPLATE.md`, `SUBMISSION-TEMPLATE.md`, `LICENSES.md`, `BOARD.md`, `DEPLOY.md`, `CLAUDE.md` |
