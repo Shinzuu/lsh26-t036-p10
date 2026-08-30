@@ -26,25 +26,30 @@ recharge to reach a chosen date, and compares two recharge habits on identical c
 
 | Requirement | Status | Where to verify |
 |---|---|---|
-| R1 — A household with six months of daily readings and its recharge history, including a light month, a heavy month and a month with a large recharge in its last week | Complete | Opens on it. **Household** section: 181 readings, 1 Jan–30 Jun 2026, 18 recharges. The months line labels 2026-01 lightest (129 units), 2026-05 heaviest (673) and 2026-05 large late recharge (৳4,300 on 26 May) |
-| R2 — The balance rebuilt day by day on the tariff, fixed charges on each month's first recharge, VAT, drawn as a line with every recharge marked | Complete | **Balance** section. 18 markers, month boundaries dashed. Click any day for its units, slab rate, month running total and closing balance. Totals: energy ৳13,844.79, VAT ৳692.24, fixed ৳492.00 (6 × ৳82), closing ৳2,080.97 |
-| R3 — The run-out date, and the amount to recharge today split into energy, the higher-slab part, fixed charges and VAT | Complete | **Questions** section, and the headline figures at the top. Runs out 20 July 2026 at 19 units a day. To last to 13 Aug 2026: ৳5,600.70 of charges = ৳3,870.68 + ৳1,307.13 + ৳164.00 + ৳258.89, leaving ৳3,519.73 to recharge today |
-| R4 — Two recharge habits compared over the same three months on identical consumption, with the cheaper named and by how much | Complete | **Habits** section. PUB-01: both ৳11,815.37, equal, 3 of 3 fixed-charge months. Load PUB-02 from the selector: recharging when low is ৳82.00 cheaper, having recharged in two of three months |
+| R1 — A household with six months of daily readings and its recharge history, including a light month, a heavy month and a month with a large recharge in its last week | Complete | Opens on it. Step **"The household"** (R1 in the sidebar): 181 readings, 1 Jan–30 Jun 2026, 18 recharges. The months line labels 2026-01 lightest (129 units), 2026-05 heaviest (673) and 2026-05 large late recharge (৳4,300 on 26 May) |
+| R2 — The balance rebuilt day by day on the tariff, fixed charges on each month's first recharge, VAT, drawn as a line with every recharge marked | Complete | Step **"Where the money went"** (R2). 18 markers, month boundaries dashed. The day detail and the slab ladder show for the latest reading without a click. Click any day for its units, slab rate, month running total and closing balance. Totals: energy ৳13,844.79, VAT ৳692.24, fixed ৳492.00 (6 × ৳82), closing ৳2,080.97 |
+| R3 — The run-out date, and the amount to recharge today split into energy, the higher-slab part, fixed charges and VAT | Complete | Step **"When to recharge"** (R3), and the overview's headline figures. Runs out 20 July 2026 at 19 units a day. To last to 13 Aug 2026: ৳5,600.70 of charges = ৳3,870.68 + ৳1,307.13 + ৳164.00 + ৳258.89, leaving ৳3,519.73 to recharge today |
+| R4 — Two recharge habits compared over the same three months on identical consumption, with the cheaper named and by how much | Complete | Step **"Which habit is cheaper"** (R4). PUB-01: both ৳11,815.37, equal, 3 of 3 fixed-charge months. Load PUB-02 from the selector: recharging when low is ৳82.00 cheaper, having recharged in two of three months |
 
 ## How to test the application
 
 1. Open <https://lsh26-t036-p10.pages.dev>. It loads household PUB-01 with no setup, no
-   login and nothing to click first.
-2. Read the three figures at the top: what is on the meter, when it runs out, and what to
-   recharge today.
-3. In **Balance**, click a day late in May, then click 1 June. The month running total resets
-   to that day's units and the slab rate drops back to ৳4.63 — the rule the problem warns
-   about, visible on the slab ladder under the day detail.
-4. In **Questions**, change the target date. The required amount moves and the four parts
-   still add to the total shown.
-5. In **Habits**, read the verdict. On PUB-01 the two habits cost exactly the same, which is
-   the correct answer here; load PUB-02, PUB-06 or PUB-24 from the selector to see a ৳82.00
-   difference and the sentence explaining where it comes from.
+   login and nothing to click first. The sidebar lists seven steps; R1–R4 are the four
+   required items, each its own step. Walk them with the sidebar, the Next/Back buttons,
+   or the ← → arrow keys.
+2. **Overview** — the three headline figures: what is on the meter, when it runs out, what
+   to recharge today. Each card is a door into its step.
+3. **Where the money went** — the balance line with every recharge marked. The latest
+   day's detail and the slab ladder are already open; click any day, or use the arrow keys
+   on the chart. Select 1 June after a day in May: the month's running total resets and
+   the rate drops back to ৳4.63 — the rule the problem warns about, visible.
+4. **When to recharge** — move the target date, or tap a preset chip (+30/+60/+90 days).
+   The amount recomputes live and the four parts carry an "adds up" check on the total.
+5. **Which habit is cheaper** — on PUB-01 the two habits cost exactly the same, which is
+   the correct answer; pick PUB-02 from the Household selector for a ৳82.00 difference and
+   the sentence naming its only possible source.
+6. Every step's header carries the household's id and its balance, so the numbers are
+   never anonymous. The tab title follows the step.
 
 ### Test or sample data
 
@@ -53,8 +58,11 @@ The selector in the top bar carries all 25 published households from
 URL is never empty. A meter you set up yourself is kept in that browser and reopens with
 you; sample and pasted households are not, so a first-time visitor always lands on the seed.
 
-For data outside the published pack, open **Paste or upload your own data** in the Household
-section and paste a case object or upload a JSON file in the same shape. A file containing a
+For data outside the published pack, use **Set up my meter** in the top bar — a form asking
+only what a household actually knows — or open **Upload a CSV, or paste your own data** on
+the household step. Both CSV (date, units, optional recharge columns; loose headers and
+day-first dates tolerated) and the organizers' JSON shape are accepted, and the two formats
+are stated next to the control. A file containing a
 `cases` list is accepted and every case in it becomes selectable. Malformed input is rejected
 with a message naming the field at fault, and the previous household stays on screen.
 
@@ -74,7 +82,7 @@ cd lsh26-t036-p10
 npm install
 npm run dev                      # development server
 npm run build                    # production build
-node --test src/lib/*.test.mjs   # 59 tests
+node --test src/lib/*.test.mjs   # 64 tests
 ```
 
 ## Problem-solving approach
@@ -105,7 +113,7 @@ fixed and re-verified on the deployed URL rather than locally.
 
 ## Technology used
 
-- **Frontend:** React 19, Tailwind CSS 4, Vite 8
+- **Frontend:** React 19, Tailwind CSS 4, Vite 8 — one page, seven hash-routed steps
 - **Backend:** none — a pure client-side calculation
 - **Database:** none. A meter the user sets up is kept in that browser's local storage; nothing leaves the device
 - **Deployment:** Cloudflare Pages
@@ -118,10 +126,10 @@ See [`LICENSES.md`](LICENSES.md) for third-party materials.
 
 | Registered member | GitHub username | Major contribution | Evidence |
 |---|---|---|---|
-| MD. Nishadul Islam Chy Shezan | `Shinzuu` | Build specification and the reference answers for item 4; required item 1 — the seeded household, the case parser and validator, the computed month labels; the application shell, the store, every merge and every deployment | `src/lib/dataset.js`, `src/features/DataSource.jsx`, `src/App.jsx`, `SPEC.md` |
-| Rimjhim Dey | `RimjhimD` | Required item 2 — the tariff engine (slab pricing on the calendar-month counter, the month reset, once-a-month fixed charges, VAT) with 37 tests written before the interface, and the balance line with a marker at every recharge; tested item 3 | `src/lib/tariff.js`, `src/lib/tariff.test.mjs`, `src/features/BalanceChart.jsx` |
-| Robiul Hassan | `MDRobiulhassan` | Required item 3 — the run-out date with its assumption stated, and the target-date recharge split into energy, higher slab, fixed charges and VAT with the four parts reconciling; tested item 4 and the whole-app pass | `src/features/Questions.jsx` |
-| Dip Jyoti Ghosh | `Dip-it11` | Required item 4 — the habit comparison over identical consumption per R-16 and R-33, the cheaper habit named and the fixed-charge explanation in words; tested item 1 | `src/features/HabitCompare.jsx` |
+| MD. Nishadul Islam Chy Shezan | `Shinzuu` | Build spec and the item-4 reference answers; R1 — the seeded household, parser and month labels; the step-by-step shell (sidebar, drawer, tooltips, toasts), the display-currency layer, the bonus features, the bug-hunt fixes; every merge and deployment | `src/lib/dataset.js`, `src/features/DataSource.jsx`, `src/App.jsx`, `SPEC.md` |
+| Rimjhim Dey | `RimjhimD` | R2 — the tariff engine (slab pricing, month reset, once-a-month fixed charges, VAT) with 37 tests before any interface, and the balance line; later persistence through the store, CSV import, the collapsed explanations; tested item 3 | `src/lib/tariff.js`, `src/lib/tariff.test.mjs`, `src/features/BalanceChart.jsx` |
+| Robiul Hassan | `MDRobiulhassan` | R3 — the run-out date and the four-part recharge breakdown; later the answer-panel overhaul (dedupe, date chips, cost bars, a 100× display fix) and the dark-mode button fix; tested item 4 and the whole-app pass | `src/features/Questions.jsx` |
+| Dip Jyoti Ghosh | `Dip-it11` | R4 — the habit comparison over identical consumption per R-16 and R-33, with the fixed-charge explanation in words; tested item 1 and the post-merge codebase review | `src/features/HabitCompare.jsx` |
 
 Commit count alone does not represent contribution.
 

@@ -12,33 +12,33 @@
   ],
   "sample_data": {
     "loads_published_fixture": true,
-    "method": "seeded on start, plus file upload and paste",
-    "reset_instructions": "The published fixture case PUB-01 from P10_prepaid_meter_public.json is bundled at src/data/seed-p10.json and loads automatically on every page load, so the initial data is restored simply by reloading the page. Nothing is persisted to localStorage or to any server. To load a different case, paste its JSON object into the load box in the header or upload a file containing it; a file holding several cases is accepted and the first is used."
+    "method": "seeded on start; all 25 published cases in a Household selector; CSV or JSON paste and upload; a set-up form for a household without a file",
+    "reset_instructions": "The published fixture case PUB-01 is bundled and loads for any first-time visitor. A household the user loads or sets up is remembered in that browser only; the header's 'Back to the sample' button (and clearing site data) returns to PUB-01. To load a different case, pick one of the 25 in the Household selector, or paste/upload CSV or JSON on the household step — the accepted formats are stated beside the control, and malformed input is refused naming the field or row at fault."
   },
   "problem_solving_method": "The tariff is the entire problem, so it is built as a pure module with a node --test suite written before any user interface, and the interface reads from it. All money is handled in integer paisa and converted to taka only at the render edge, because the balance compounds across 181 days and floating point drift would put every downstream answer slightly wrong. The organizers' published fixture shape was adopted directly as the application's data model rather than designing a schema and mapping onto it, so an unpublished case in the same shape loads without a translation layer. Each of the four required items is owned by exactly one unit on its own branch and its own files.",
   "requirements": {
     "R1": {
       "status": "complete",
-      "evidence": "The application opens on fixture case PUB-01 from the organizers' published P10 sample data - 181 consecutive daily readings from 2026-01-01 to 2026-06-30 with 18 recharges - and the header names the lightest month (2026-01, 129 units), the heaviest (2026-05, 673 units) and the month whose largest recharge falls in its last seven days (2026-05, BDT 4,300.00 on 26 May). All three labels are computed from whatever case is loaded, not hard-coded. Another case can be pasted or uploaded, including the whole 25-case pack file."
+      "evidence": "Step \"The household\" (R1 in the sidebar) opens on fixture case PUB-01 from the organizers' published P10 sample data - 181 consecutive daily readings from 2026-01-01 to 2026-06-30 with 18 recharges - and the header names the lightest month (2026-01, 129 units), the heaviest (2026-05, 673 units) and the month whose largest recharge falls in its last seven days (2026-05, BDT 4,300.00 on 26 May). All three labels are computed from whatever case is loaded, not hard-coded. Another case can be pasted or uploaded, including the whole 25-case pack file."
     },
     "R2": {
       "status": "complete",
-      "evidence": "src/lib/tariff.js rebuilds the balance day by day in integer paisa: each day's units are charged at the slab the calendar month's running total has reached, the counter resets on the 1st and is never reset by a recharge, the demand charge and meter rent are taken once per month on that month's first recharge, and VAT is 5 percent of the energy amount only. On PUB-01 this gives energy BDT 13,844.79, VAT BDT 692.24, fixed charges BDT 492.00 over six months and a closing balance of BDT 2,080.97 on 30 June. The balance is drawn as a line over the whole period with a marker at every recharge and month boundaries visible; selecting a day shows its units, the slab rate charged and the month running total. Covered by 37 tests over every slab boundary, the month rollover and the once-per-month fixed charges."
+      "evidence": "Step \"Where the money went\" (R2). The engine rebuilds the balance day by day in integer paisa: each day's units are charged at the slab the calendar month's running total has reached, the counter resets on the 1st and is never reset by a recharge, the demand charge and meter rent are taken once per month on that month's first recharge, and VAT is 5 percent of the energy amount only. On PUB-01 this gives energy BDT 13,844.79, VAT BDT 692.24, fixed charges BDT 492.00 over six months and a closing balance of BDT 2,080.97 on 30 June. The balance is drawn as a line over the whole period with a marker at every recharge and month boundaries visible; selecting a day shows its units, the slab rate charged and the month running total. Covered by 37 tests over every slab boundary, the month rollover and the once-per-month fixed charges."
     },
     "R3": {
       "status": "complete",
-      "evidence": "From the closing balance and the household's usual daily use the app projects forward day by day, still respecting the calendar-month slab reset, and names the date the balance runs out - 20 July 2026 on PUB-01 at 19 units a day, with the assumption stated on screen. A target-date input, defaulting to the case's own target date, shows what must be recharged today: on PUB-01 to last to 13 August 2026 the days cost BDT 5,600.70 - energy 3,870.68, the part caused by being in a higher slab 1,307.13, fixed charges 164.00 and VAT 258.89 - and the deposit needed is BDT 3,519.73 after the 2,080.97 already on the meter. The four parts reconcile to the cost on screen, and the baseline used for the higher-slab part is stated because the problem does not define one."
+      "evidence": "Step \"When to recharge\" (R3), with the same figures on the overview. From the closing balance and the household's usual daily use the app projects forward day by day, still respecting the calendar-month slab reset, and names the date the balance runs out - 20 July 2026 on PUB-01 at 19 units a day, with the assumption stated on screen. A target-date input, defaulting to the case's own target date, shows what must be recharged today: on PUB-01 to last to 13 August 2026 the days cost BDT 5,600.70 - energy 3,870.68, the part caused by being in a higher slab 1,307.13, fixed charges 164.00 and VAT 258.89 - and the deposit needed is BDT 3,519.73 after the 2,080.97 already on the meter. The four parts reconcile to the cost on screen, and the baseline used for the higher-slab part is stated because the problem does not define one."
     },
     "R4": {
       "status": "complete",
-      "evidence": "Both habits run over the case's three comparison months on identical daily consumption and the same calendar-month slab counter, per R-16, starting from the case's opening balance. Cost is what the meter consumes - energy, VAT and the applicable monthly fixed charges - per R-33, not the amount deposited. Each habit shows its energy, VAT, fixed charges, total and the recharge dates it produced, the cheaper habit is named with the difference, and a sentence states that any difference comes only from how many monthly first-recharge fixed charges occurred. Verified against an independently computed reference over all 25 published cases: energy and VAT are identical between the habits in every case, 22 cases come out equal and three (PUB-02, PUB-06, PUB-24) differ by exactly BDT 82.00, the one month of fixed charges the low-balance habit avoids."
+      "evidence": "Step \"Which habit is cheaper\" (R4). Both habits run over the case's three comparison months on identical daily consumption and the same calendar-month slab counter, per R-16, starting from the case's opening balance. Cost is what the meter consumes - energy, VAT and the applicable monthly fixed charges - per R-33, not the amount deposited. Each habit shows its energy, VAT, fixed charges, total and the recharge dates it produced, the cheaper habit is named with the difference, and a sentence states that any difference comes only from how many monthly first-recharge fixed charges occurred. Verified against an independently computed reference over all 25 published cases: energy and VAT are identical between the habits in every case, 22 cases come out equal and three (PUB-02, PUB-06, PUB-24) differ by exactly BDT 82.00, the one month of fixed charges the low-balance habit avoids."
     }
   },
   "team_members": [
     {
       "registered_name": "MD. Nishadul Islam Chy Shezan",
       "github_username": "Shinzuu",
-      "major_contribution": "Team lead and integrator for this repository. Wrote the build specification (SPEC.md) including the tariff rules, the fixed engine and store export shapes and the reference answers for item 4. Built required item 1: the seeded household from the published fixture, the case parser and validator (src/lib/dataset.js, 15 tests) and the header strip with the computed month labels (src/features/DataSource.jsx). Owned the application shell, the store, all merges and every deployment.",
+      "major_contribution": "Team lead and integrator for this repository. Wrote the build specification (SPEC.md) including the tariff rules, the fixed engine and store export shapes and the reference answers for item 4. Built required item 1: the seeded household from the published fixture, the case parser and validator (src/lib/dataset.js, 15 tests) and the header strip with the computed month labels (src/features/DataSource.jsx). Owned the application shell, the store, all merges and every deployment. Later: the step-by-step shell with sidebar, drawer, tooltips and toasts; the display-currency layer; the bonus features; the bug-hunt and its ten fixes; every merge and deployment.",
       "evidence_paths_or_commits": [
         "src/lib/dataset.js",
         "src/lib/dataset.test.mjs",
@@ -53,7 +53,7 @@
     {
       "registered_name": "Rimjhim Dey",
       "github_username": "RimjhimD",
-      "major_contribution": "Built required item 2: the tariff engine (src/lib/tariff.js) - slab pricing against the calendar-month running total, the month reset, the once-per-month demand charge and meter rent on the first recharge, VAT on energy only, all in integer paisa - with its node --test suite written before the user interface (src/lib/tariff.test.mjs, 37 tests), plus the balance line with a marker at every recharge (src/features/BalanceChart.jsx, src/lib/chart-scale.js).",
+      "major_contribution": "Built required item 2: the tariff engine (src/lib/tariff.js) - slab pricing against the calendar-month running total, the month reset, the once-per-month demand charge and meter rent on the first recharge, VAT on energy only, all in integer paisa - with its node --test suite written before the user interface (src/lib/tariff.test.mjs, 37 tests), plus the balance line with a marker at every recharge (src/features/BalanceChart.jsx, src/lib/chart-scale.js). Later: persistence through the store, CSV import with row-naming errors, the collapsed Explainer, and the QA pass on the set-up form and phone case picker.",
       "evidence_paths_or_commits": [
         "src/lib/tariff.js",
         "src/lib/tariff.test.mjs",
@@ -64,9 +64,12 @@
     {
       "registered_name": "Robiul Hassan",
       "github_username": "MDRobiulhassan",
-      "major_contribution": "Built required item 3: the family's two questions (src/features/Questions.jsx) - the run-out date projected from today's balance and usual daily use with the assumption stated on screen, and the target-date input showing what must be recharged today broken into energy, the part caused by being in a higher slab, fixed charges and VAT, with the four parts reconciling on screen.",
+      "major_contribution": "Built required item 3: the family's two questions (src/features/Questions.jsx) - the run-out date projected from today's balance and usual daily use with the assumption stated on screen, and the target-date input showing what must be recharged today broken into energy, the part caused by being in a higher slab, fixed charges and VAT, with the four parts reconciling on screen. Later: the sideB overhaul of all six answer panels — deduplication, preset date chips, cost bars, a shared formatting module — fixing a 100x display error in the habit thresholds; and the dark-mode primary-button contrast fix with the step-progress sidebar declutter.",
       "evidence_paths_or_commits": [
-        "src/features/Questions.jsx"
+        "src/features/Questions.jsx",
+        "src/lib/format.js",
+        "testing/SIDEB-UI-HANDOFF.md",
+        "testing/UI-DECLUTTER-HANDOFF.md"
       ]
     },
     {
