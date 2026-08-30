@@ -3,7 +3,7 @@
 This is a LofiStack Hackathon 2026 problem repo, built under a 4-hour clock ending
 22:00. Scoring facts that override normal instincts:
 
-1. **The 4 MVP bullets in README.md are the spec.** They are pass/fail, checked by a
+1. **The 4 required items in SPEC.md are the spec** (also in README.md). They are pass/fail, checked by a
    judge in under a minute each. Build them in order. Nothing else — no extra feature,
    no refactor, no polish — starts until all four pass on the LIVE deployed URL.
 2. **The live URL is the product.** `npm run deploy -- --project-name <name>` after
@@ -13,9 +13,15 @@ This is a LofiStack Hackathon 2026 problem repo, built under a 4-hour clock endi
    200, staleness against your last local build, and a grep for what you shipped
    inside the live bundle — the 27 Aug drill lost 16 minutes to a stale deploy and
    a bullet marked "fixed" that was never re-checked live.
-3. **After the team calls the code freeze (~21:15), no commits.** Every commit after
-   the freeze costs real marks (early-submission bonus). If asked to fix something
-   post-freeze, flag the cost first.
+3. **The early bonus is measured from the Google Form receipt, NOT from any commit.**
+   Organizer clarification, 30 Aug: *"Commit times are not used."* So commits are free
+   until 22:00. What buys the bonus is the team leader submitting the form early, and
+   only once at least 3 of the 4 required items pass on BOTH problems. The 21:15 freeze
+   is a *merge* freeze, leaving 45 minutes for the README proof lines, EVENT.md,
+   evaluation-manifest.json, LICENSES.md, making the repo public and the phone smoke
+   test. After 21:15, only fixes the integrator asks for.
+3a. **Never squash, delete or rewrite git history after 18:00.** Judges read the
+    history. Inside this repo use `git pull --no-rebase`, never `git pull --rebase`.
 4. **UI/UX marks come from states, not decoration:** empty state, loading state, error
    state, usable at phone width, labelled controls, bad input → message not crash.
    Tailwind defaults done consistently are enough; decoration scores zero.
@@ -53,10 +59,11 @@ This is a LofiStack Hackathon 2026 problem repo, built under a 4-hour clock endi
 ## Four devices, one repo — sync rules
 
 Four team members each run their own Claude Code session on their own machine.
+This repo is P10: shinzuu U1, Rimjhim U2, Robiul U3, Dip U4.
 Sessions share nothing except this repo — **if it matters to more than one
 device, it goes in a committed file, not in chat.**
 
-- **Start of every session:** `git pull --rebase` first, then read `SPEC.md`
+- **Start of every session:** `git pull --no-rebase` first, then read `SPEC.md`
   and `BOARD.md`.
 - **`BOARD.md` is the shared canvas.** It shows what every device is doing.
   Update your unit's row on every status change (`todo` → `building` →
@@ -94,7 +101,7 @@ device, it goes in a committed file, not in chat.**
   team's own code comment — sat unimplemented; that one bug cost 15–17 marks
   across five scoring categories.
 - **Push immediately** when your unit's done-when passes: commit prefixed with
-  the unit (`U2: …`), `git pull --rebase` if rejected, never `--force`.
+  the unit (`U2: …`), `git pull --no-rebase` if rejected, never `--force`.
 - **Deploys are the integrator's job** — one device runs `npm run deploy`, after
   every merged unit. Everyone verifies on the live URL it produces.
 - **Mid-build discoveries** that affect others (API quirk, deploy trap, licence

@@ -25,6 +25,9 @@
   --radius-card: 0.875rem;
 }
 
+/* Theme: ochre — this is an operations app: meters, balances, running costs. */
+@import './themes/ochre.css';
+
 html {
   -webkit-text-size-adjust: 100%;
 }
