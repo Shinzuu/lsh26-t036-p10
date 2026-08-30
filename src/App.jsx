@@ -199,10 +199,25 @@ function DataNotice({ kase, isPublished, onSetup, onStep }) {
 /** The title of the step you are on, and what it is for. */
 function StepHeader({ step }) {
   const s = STEPS.find((x) => x.id === step)
+  const { kase, sim } = useCase()
+  const { money } = useDisplay()
   if (!s) return null
+  const closing = sim?.rows?.at(-1)?.balancePaisa
   return (
     <header>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        {s.id !== 'overview' && kase && (
+          <span className="order-last ml-auto flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="rounded-full border border-ink-300/60 px-2.5 py-1 text-ink-500">
+              {kase.case_id}
+            </span>
+            {closing !== undefined && (
+              <span className="rounded-full border border-ink-300/60 px-2.5 py-1 tabular-nums text-ink-500">
+                {money(closing)} on the meter
+              </span>
+            )}
+          </span>
+        )}
         {s.item && (
           <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-accent">
             {s.item}
@@ -316,6 +331,25 @@ function Layout() {
   const [setup, setSetup] = useState(false)
   const [menu, setMenu] = useState(false)
   useOpenDetailsForPrint()
+
+  // Left and right arrows walk the steps. Not while typing, not inside a
+  // select, chart or dialog — anywhere arrows already mean something.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+      if (e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return
+      const el = document.activeElement
+      if (el && (/^(INPUT|SELECT|TEXTAREA|SVG)$/i.test(el.tagName) || el.isContentEditable)) return
+      if (document.querySelector('dialog[open]')) return
+      const i = STEPS.findIndex((x) => x.id === window.location.hash.replace('#', '')) 
+      const cur = i === -1 ? 0 : i
+      const next = STEPS[cur + (e.key === 'ArrowRight' ? 1 : -1)]
+      if (next) setStep(next.id)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const toast = useToast()
   // The step lives in the address bar, so a link points at a step, the browser's
   // Back button walks them, and a refresh stays where the reader was.
@@ -332,6 +366,12 @@ function Layout() {
     setStepState(id)
     window.scrollTo({ top: 0, behavior: 'auto' })
   }
+  // The browser tab names the step — switching tabs back, you know where you were.
+  useEffect(() => {
+    const s = STEPS.find((x) => x.id === step)
+    document.title = s && s.id !== 'overview' ? `${s.label} · Recharge Advisor` : 'Recharge Advisor'
+  }, [step])
+
   useEffect(() => {
     const onHash = () => {
       const id = window.location.hash.replace('#', '')
@@ -476,6 +516,7 @@ function Layout() {
                 </p>
               )}
 
+              <div key={step} className="step-in space-y-6">
               <StepHeader step={step} />
 
               {step === 'overview' && (
@@ -506,6 +547,7 @@ function Layout() {
               )}
 
               <StepFooter step={step} onSelect={setStep} />
+              </div>
             </>
           )}
         </main>

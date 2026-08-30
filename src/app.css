@@ -424,3 +424,22 @@ button:active,
     border-top: 1px solid #999;
   }
 }
+
+
+/* A step's content arrives; it does not just swap. */
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.step-in {
+  animation: step-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-in {
+    animation: none;
+  }
+}

@@ -139,6 +139,8 @@ export default function Sidebar({ active, onSelect, className = '', onNavigate, 
         <Check className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
         <span>
           R1 to R4 are the four things this tool has to do. Each has its own step, in order.
+          Walk them with the <kbd className="rounded border border-ink-300/70 px-1 font-sans">←</kbd>{' '}
+          <kbd className="rounded border border-ink-300/70 px-1 font-sans">→</kbd> keys.
         </span>
       </p>
     </nav>
