@@ -28,7 +28,7 @@ export default function CasePicker({ current, onLoad, onError }) {
 
   return (
     <label className="relative flex min-w-0 items-center gap-2 text-sm">
-      <span className="sr-only">Household</span>
+      <span className="hidden shrink-0 text-xs text-ink-300 lg:block">Household</span>
       {/* Both indicators are centred on the control's own axis rather than left
           to their static position, which put them at the top of the label. */}
       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-500">
@@ -45,12 +45,14 @@ export default function CasePicker({ current, onLoad, onError }) {
           if (next) onLoad(next)
         }}
       >
-        <option value={current}>{current}</option>
+        <option value={current}>
+          {/^PUB-\d+$/.test(current) ? `${current} — sample household` : current}
+        </option>
         {(cases ?? [])
           .filter((c) => c.case_id !== current)
           .map((c) => (
             <option key={c.case_id} value={c.case_id}>
-              {c.case_id} · {c.days.length} days
+              {c.case_id} — sample, {c.days.length} days of readings
             </option>
           ))}
       </select>
