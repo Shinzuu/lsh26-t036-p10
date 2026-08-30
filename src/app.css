@@ -49,6 +49,38 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* -----------------------------------------------------------------------------
+   Type. One family, but a deliberate scale and real numerals.
+
+   Money is the content here, so every figure is lining and tabular — columns of
+   taka line up, and a digit changing does not shift the ones beside it. Display
+   sizes get negative tracking because at 30px+ the default spacing reads loose.
+   -------------------------------------------------------------------------- */
+.tabular-nums,
+.font-meter {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.font-meter {
+  letter-spacing: -0.02em;
+  font-feature-settings: 'ss01' 1;
+}
+
+h1,
+h2 {
+  letter-spacing: -0.021em;
+}
+
+/* A hairline that carries the eye across a section head without a box. */
+.rule {
+  background-image: linear-gradient(
+    to right,
+    var(--color-ink-300) 0 2rem,
+    color-mix(in oklab, var(--color-ink-300) 45%, transparent) 2rem 100%
+  );
+  block-size: 1px;
+}
+
 body {
   @apply bg-ink-50 text-ink-900 font-sans antialiased;
   /* Phone-first: judges open the live URL on a phone. */

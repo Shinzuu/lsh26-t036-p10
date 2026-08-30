@@ -25,6 +25,23 @@ const SECTIONS = [
   { id: 'habits', label: 'Habits' },
 ]
 
+/**
+ * An eyebrow and a hairline. Deliberately not a heading: each panel already owns
+ * the one h2 for its required item, and a second would put the same section in
+ * the heading tree twice.
+ */
+function SectionHead({ eyebrow, note }) {
+  return (
+    <div className="mb-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-accent">{eyebrow}</p>
+        {note && <p className="text-xs text-ink-500">{note}</p>}
+      </div>
+      <div className="rule mt-2" />
+    </div>
+  )
+}
+
 function Layout() {
   const { kase, load, error, setError } = useCase()
   const [setup, setSetup] = useState(false)
@@ -32,18 +49,20 @@ function Layout() {
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-20 border-b border-ink-300/60 bg-ink-50/85 backdrop-blur dark:bg-ink-900/85">
+      <header className="sticky top-0 z-20 border-b border-ink-700 bg-ink-700 text-ink-50">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:px-6">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold tracking-tight sm:text-base">
               Recharge Advisor
             </p>
-            <p className="truncate text-xs text-ink-500">Prepaid meter · slab-aware</p>
+            <p className="truncate text-xs text-ink-300">
+              Prepaid meter · rebuilt on the published slab tariff
+            </p>
           </div>
           <button
             type="button"
             onClick={() => setSetup((v) => !v)}
-            className="shrink-0 rounded-xl border border-accent/50 bg-accent-soft px-3 py-2 text-sm font-medium text-accent"
+            className="shrink-0 rounded-xl bg-sand px-3 py-2 text-sm font-medium text-ink-900 hover:bg-sand/90"
           >
             {setup ? 'Close' : 'Set up my meter'}
           </button>
@@ -64,7 +83,7 @@ function Layout() {
               <li key={s.id}>
                 <a
                   href={`#${s.id}`}
-                  className="block whitespace-nowrap rounded-lg px-2.5 py-1 text-ink-500 hover:bg-accent-soft hover:text-accent"
+                  className="block whitespace-nowrap rounded-lg px-2.5 py-1 text-ink-300 hover:bg-white/10 hover:text-white"
                 >
                   {s.label}
                 </a>
@@ -128,21 +147,25 @@ function Layout() {
 
             {/* Item 1 — the household's readings and recharges, and how a judge loads their own. */}
             <section id="household" className="scroll-mt-32">
+              <SectionHead eyebrow="Required item 1 · the household" note="six months of daily readings and its recharge history" />
               <DataSource kase={kase} error={null} onLoad={load} />
             </section>
 
             {/* Item 2 — the balance rebuilt day by day, with every recharge marked. */}
             <section id="balance" className="scroll-mt-32">
+              <SectionHead eyebrow="Required item 2 · the rebuild" note="each day at the slab the month had reached" />
               <BalanceChart />
             </section>
 
             <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
               {/* Item 3 — when does it run out, and how much to recharge today. */}
               <section id="questions" className="min-w-0 scroll-mt-32">
+                <SectionHead eyebrow="Required item 3 · the two questions" />
                 <Questions />
               </section>
               {/* Item 4 — low-balance habit against monthly habit, same consumption. */}
               <section id="habits" className="min-w-0 scroll-mt-32">
+                <SectionHead eyebrow="Required item 4 · the habits" />
                 <HabitCompare />
               </section>
             </div>
